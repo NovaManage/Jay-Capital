@@ -15,6 +15,7 @@ export interface LoanRow {
   annual_rate: number;
   closing_date: string;
   lender_name: string | null;
+  lender_short_name?: string | null;
   total_disbursed: number;
   remaining_draw: number;
   accrued_interest: number;
@@ -70,7 +71,7 @@ export default function PortfolioTable({ loans, canEdit }: { loans: LoanRow[]; c
       }
       if (q) {
         const hay = [
-          l.loan_number, l.borrower_name, l.property, l.lender_name,
+          l.loan_number, l.borrower_name, l.property, l.lender_name, l.lender_short_name,
           fmtDate(l.closing_date), l.loan_amount, l.acquisition, l.construction,
           (rateFraction(l.annual_rate) * 100).toFixed(2),
           l.total_disbursed, l.total_draw, l.remaining_draw, l.status,
@@ -197,7 +198,7 @@ export default function PortfolioTable({ loans, canEdit }: { loans: LoanRow[]; c
                   <td className="num">{money(l.construction)}</td>
                   <td className="num">{pct(l.annual_rate)}</td>
                   <td>{fmtDate(l.closing_date)}</td>
-                  <td>{l.lender_name ?? ''}</td>
+                  <td>{l.lender_short_name || l.lender_name || ''}</td>
                   <td className="num">{money(l.total_disbursed)}</td>
                   <td className="num">{money(l.total_draw)}</td>
                   <td className="num">{money(l.remaining_draw)}</td>

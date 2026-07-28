@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { money, pct, fmtDate, firstOfMonth, monthName, clampMonth, statementMonths, statementPeriod } from '@/lib/format';
 import { buildStatement, drawInterest, type Draw as EngineDraw } from '@/lib/interest';
-import { deleteDraw, setLoanStatus, deleteLoan } from '@/lib/actions';
+import { deleteDraw, setLoanStatus, deleteLoan, deletePayment } from '@/lib/actions';
+import { buildLedger, type PaymentRow, type AllocationRow } from '@/lib/ledger';
+import AddPaymentModal from '@/components/AddPaymentModal';
 import EmailStatementControls from '@/components/EmailStatementControls';
 import AddDrawModal from '@/components/AddDrawModal';
 import AddBorrowerModal from '@/components/AddBorrowerModal';
@@ -21,8 +23,12 @@ interface Summary {
 }
 interface DrawRow { id: string; draw_date: string; description: string; amount: number; interest_accrued: number | null; }
 
-export default function LoanDetail({ summary, draws, canEdit, canSend }: {
-  summary: Summary; draws: DrawRow[]; canEdit: boolean; canSend: boolean;
+export default function LoanDetail({
+  summary, draws, payments = [], allocations = [], canEdit, canSend,
+}: {
+  summary: Summary; draws: DrawRow[];
+  payments?: PaymentRow[]; allocations?: AllocationRow[];
+  canEdit: boolean; canSend: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -32,14 +38,17 @@ export default function LoanDetail({ summary, draws, canEdit, canSend }: {
 
   const [confirmDeleteLoan, setConfirmDeleteLoan] = useState(false);
   const [confirmDeleteDraw, setConfirmDeleteDraw] = useState<string | null>(null);
+  const [confirmDeletePayment, setConfirmDeletePayment] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  const engineLoan = {
+    loan_amount: Number(summary.loan_amount), acquisition: Number(summary.acquisition),
+    annual_rate: rate, closing_date: summary.closing_date,
+  };
   const engineDraws: EngineDraw[] = draws.map(d => ({ draw_date: d.draw_date, amount: Number(d.amount), description: d.description }));
-  const stmt = buildStatement(
-    { loan_amount: Number(summary.loan_amount), acquisition: Number(summary.acquisition), annual_rate: rate, closing_date: summary.closing_date },
-    engineDraws, stmtDate
-  );
+  const stmt = buildStatement(engineLoan, engineDraws, stmtDate);
+  const ledger = buildLedger(engineLoan, engineDraws, payments, allocations, stmtDate);
   const period = statementPeriod(stmtDate);
 
   const statementUrl = typeof window !== 'undefined' ? `${window.location.origin}/statement/${summary.access_token}` : '';
@@ -145,7 +154,55 @@ export default function LoanDetail({ summary, draws, canEdit, canSend }: {
           <div className="row"><span className="k">Total draws this period</span><span className="v">{money(stmt.periodDrawTotal)}</span></div>
           <div className="row"><span className="k">Base balance interest</span><span className="v">{money(stmt.baseInterest)}</span></div>
           <div className="row"><span className="k">Interest accrued this period</span><span className="v">{money(stmt.periodDrawInterest)}</span></div>
-          <div className="row due"><span className="k">Amount Due</span><span className="v">{money(stmt.amountDue)}</span></div>
+          <div className="row"><span className="k">Previous balance</span><span className="v">{money(ledger.previousBalance)}</span></div>
+          <div className="row"><span className="k">Payments received</span><span className="v">{ledger.paymentsThisPeriod > 0 ? `(${money(ledger.paymentsThisPeriod)})` : money(0)}</span></div>
+          <div className="row"><span className="k">Current charges</span><span className="v">{money(ledger.currentCharge)}</span></div>
+          <div className="row due"><span className="k">Amount Due</span><span className="v">{money(ledger.amountDue)}</span></div>
+        </div>
+        {ledger.priorUnpaid.length > 0 && (
+          <p className="muted" style={{ marginBottom: 0 }}>
+            Past due: {ledger.priorUnpaid.map(r => `${r.label} ${money(r.balance)}`).join(' \u00b7 ')}
+          </p>
+        )}
+        {ledger.unapplied > 0.005 && (
+          <p className="muted" style={{ marginBottom: 0 }}>
+            {money(ledger.unapplied)} in payments has not been applied to a specific month yet.
+          </p>
+        )}
+      </div>
+
+      {/* Payments */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <h2 style={{ color: 'var(--navy)', marginTop: 0, marginBottom: 0 }}>Payments</h2>
+          {canEdit && (
+            <AddPaymentModal
+              loanId={summary.loan_id} loan={engineLoan} draws={engineDraws}
+              payments={payments} allocations={allocations}
+            />
+          )}
+        </div>
+        <div className="tablescroll" style={{ marginTop: 12 }}>
+          <table className="bordered">
+            <thead><tr><th>Date</th><th>Method</th><th>Note</th><th>Applied To</th><th className="num">Amount</th>{canEdit && <th></th>}</tr></thead>
+            <tbody>
+              {payments.map(p => {
+                const mine = allocations.filter(a => a.payment_id === p.id);
+                return (
+                  <tr key={p.id}>
+                    <td>{fmtDate(p.payment_date)}</td>
+                    <td>{p.method || ''}</td>
+                    <td>{p.note || ''}</td>
+                    <td>{mine.length ? mine.map(a => `${monthName(a.period_month)} ${money(a.amount)}`).join(', ') : <span className="muted">unapplied</span>}</td>
+                    <td className="num">{money(p.amount)}</td>
+                    {canEdit && <td className="num"><button className="btn danger" disabled={busy}
+                      onClick={() => setConfirmDeletePayment(p.id)}>Delete</button></td>}
+                  </tr>
+                );
+              })}
+              {payments.length === 0 && <tr><td colSpan={canEdit ? 6 : 5} className="muted" style={{ textAlign: 'center' }}>No payments recorded.</td></tr>}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -197,6 +254,22 @@ export default function LoanDetail({ summary, draws, canEdit, canSend }: {
         confirmLabel="Delete draw" danger
         onConfirm={() => confirmDeleteDraw && doDeleteDraw(confirmDeleteDraw)}
         onCancel={() => setConfirmDeleteDraw(null)}
+      />
+      <ConfirmDialog
+        open={!!confirmDeletePayment}
+        title="Delete payment"
+        message="Remove this payment? Anything it was applied to becomes outstanding again."
+        confirmLabel="Delete payment" danger
+        onConfirm={async () => {
+          const id = confirmDeletePayment; setConfirmDeletePayment(null);
+          if (!id) return;
+          setBusy(true);
+          const res = await deletePayment(summary.loan_id, id);
+          setBusy(false);
+          if (!res.ok) { setActionError(res.error || 'Could not delete the payment.'); return; }
+          router.refresh();
+        }}
+        onCancel={() => setConfirmDeletePayment(null)}
       />
       <AlertDialog open={copied} title="Copied" message="Borrower link copied to clipboard." tone="success" onClose={() => setCopied(false)} />
       <AlertDialog

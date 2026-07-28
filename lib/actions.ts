@@ -295,37 +295,53 @@ export async function importLoansCSV(rows: Record<string, string>[]) {
  * Lender management
  * ============================================================ */
 
-export async function createLender(name: string) {
+export async function createLender(opts: {
+  name: string; shortName?: string; paymentMethod?: string; paymentInstructions?: string;
+}) {
   return run(async () => {
     await requireAdmin();
-    const clean = name.trim();
-    if (!clean) throw new Error('Lender name is required.');
+    const name = opts.name.trim();
+    if (!name) throw new Error('Lender name is required.');
     const svc = serviceClient();
 
-    // Reuse the row if the name already exists (possibly inactivated).
-    const { data: existing } = await svc.from('lenders').select('id, active').ilike('name', clean).maybeSingle();
+    const row = {
+      name,
+      short_name: (opts.shortName || '').trim() || name,
+      payment_method: (opts.paymentMethod || '').trim() || null,
+      payment_instructions: (opts.paymentInstructions || '').trim() || null,
+    };
+
+    const { data: existing } = await svc.from('lenders').select('id, active').ilike('name', name).maybeSingle();
     if (existing) {
-      if (!existing.active) await svc.from('lenders').update({ active: true }).eq('id', existing.id);
+      await svc.from('lenders').update({ ...row, active: true }).eq('id', existing.id);
       revalidatePath('/admin/lenders');
-      return { message: `${clean} is already on the list${existing.active ? '.' : ' and has been reactivated.'}`, id: existing.id };
+      return { message: `${name} already existed and has been updated${existing.active ? '.' : ' and reactivated.'}`, id: existing.id };
     }
 
-    const { data, error } = await svc.from('lenders').insert({ name: clean }).select('id').single();
+    const { data, error } = await svc.from('lenders').insert(row).select('id').single();
     if (error) throw new Error(error.message);
     revalidatePath('/admin/lenders');
     revalidatePath('/admin/loans/new');
-    return { message: `${clean} added.`, id: data.id };
+    return { message: `${name} added.`, id: data.id };
   });
 }
 
-export async function updateLender(id: string, name: string) {
+export async function updateLender(id: string, opts: {
+  name: string; shortName?: string; paymentMethod?: string; paymentInstructions?: string;
+}) {
   return run(async () => {
     await requireAdmin();
-    const clean = name.trim();
-    if (!clean) throw new Error('Lender name is required.');
-    const { error } = await serviceClient().from('lenders').update({ name: clean }).eq('id', id);
+    const name = opts.name.trim();
+    if (!name) throw new Error('Lender name is required.');
+    const { error } = await serviceClient().from('lenders').update({
+      name,
+      short_name: (opts.shortName || '').trim() || name,
+      payment_method: (opts.paymentMethod || '').trim() || null,
+      payment_instructions: (opts.paymentInstructions || '').trim() || null,
+    }).eq('id', id);
     if (error) throw new Error(error.message);
     revalidatePath('/admin/lenders');
+    revalidatePath('/admin');
     return { message: 'Lender updated.' };
   });
 }
@@ -346,6 +362,74 @@ export async function setLenderActive(id: string, active: boolean) {
     if (error) throw new Error(error.message);
     revalidatePath('/admin/lenders');
     return { message: 'Lender reactivated.' };
+  });
+}
+
+/* ============================================================
+ * Payments
+ * ============================================================ */
+
+/**
+ * Record a borrower payment and apply it to specific charge periods.
+ * `allocations` is [{ periodMonth, amount }]; the total may be less than the
+ * payment (the remainder shows on statements as unapplied) but never more.
+ */
+export async function addPayment(loanId: string, opts: {
+  paymentDate: string; amount: number; method?: string; note?: string;
+  allocations: { periodMonth: string; amount: number }[];
+}) {
+  return run(async () => {
+    await requireAdmin();
+    if (!opts.paymentDate) throw new Error('Payment date is required.');
+    const amount = Number(opts.amount);
+    if (!(amount > 0)) throw new Error('Payment amount must be greater than zero.');
+
+    const allocs = (opts.allocations || []).filter(a => Number(a.amount) > 0);
+    const allocTotal = allocs.reduce((s, a) => s + Number(a.amount), 0);
+    if (allocTotal - amount > 0.005) {
+      throw new Error('The amounts applied to charges add up to more than the payment.');
+    }
+
+    const svc = serviceClient();
+    const { data: pay, error } = await svc.from('payments').insert({
+      loan_id: loanId,
+      payment_date: opts.paymentDate,
+      amount,
+      method: (opts.method || '').trim() || null,
+      note: (opts.note || '').trim() || null,
+    }).select('id').single();
+    if (error) throw new Error(error.message);
+
+    if (allocs.length) {
+      const { error: aErr } = await svc.from('payment_allocations').insert(
+        allocs.map(a => ({
+          payment_id: pay.id, loan_id: loanId,
+          period_month: a.periodMonth, amount: Number(a.amount),
+        }))
+      );
+      if (aErr) throw new Error(aErr.message);
+    }
+
+    revalidatePath(`/admin/loans/${loanId}`);
+    revalidatePath('/admin');
+    const left = amount - allocTotal;
+    return {
+      message: left > 0.005
+        ? `Payment recorded. ${left.toFixed(2)} is not yet applied to a charge.`
+        : 'Payment recorded.',
+    };
+  });
+}
+
+export async function deletePayment(loanId: string, paymentId: string) {
+  return run(async () => {
+    await requireAdmin();
+    // allocations cascade on payment delete
+    const { error } = await serviceClient().from('payments').delete().eq('id', paymentId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/admin/loans/${loanId}`);
+    revalidatePath('/admin');
+    return { message: 'Payment removed.' };
   });
 }
 

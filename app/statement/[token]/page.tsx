@@ -2,6 +2,8 @@ import { serviceClient } from '@/lib/supabase-server';
 import StatementView from '@/components/StatementView';
 import PortalTitle from '@/components/PortalTitle';
 import ClaimAccountCard from '@/components/ClaimAccountCard';
+import LiveRefresh from '@/components/LiveRefresh';
+import { fetchStatementExtras } from '@/lib/statement-data';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,12 +20,17 @@ export default async function StatementPage({ params }: { params: { token: strin
   const { data: borrower } = await supabase
     .from('borrowers').select('user_id').eq('id', loan.borrower_id).maybeSingle();
   const canClaim = !!loan.borrower_email && !borrower?.user_id;
+  const extras = await fetchStatementExtras(loan.loan_id);
 
   return (
     <>
       <PortalTitle name={loan.borrower_name} />
+      <LiveRefresh />
       {canClaim && <ClaimAccountCard token={params.token} email={loan.borrower_email} />}
-      <StatementView loan={loan} draws={draws ?? []} />
+      <StatementView
+        loan={loan} draws={draws ?? []}
+        payments={extras.payments} allocations={extras.allocations} payInfo={extras.payInfo}
+      />
     </>
   );
 }

@@ -1,0 +1,196 @@
+import { buildStatement, type Loan, type Draw } from '@/lib/interest';
+import { firstOfMonth, monthName } from '@/lib/format';
+
+/**
+ * Jay Capital -- statement ledger.
+ *
+ * Sits ON TOP of lib/interest.ts, which is left untouched. That module
+ * answers "what interest was charged for period P". This one answers
+ * "what does the borrower owe today, given what they've been charged and
+ * what they've paid".
+ *
+ * MODEL
+ *   A CHARGE is one statement period's interest. It is computed, never
+ *   stored -- charge(P) === buildStatement(..., P + 1 month).amountDue.
+ *
+ *   The running balance is DATE-based, which is how a borrower reads a
+ *   statement:
+ *       Previous Balance   = all charges before P, less all payments dated before P
+ *       Less Payments      = payments dated inside P
+ *       Plus Current Charges = charge(P)
+ *       = Amount Due
+ *
+ *   The "unpaid previous charges" breakdown is ALLOCATION-based: it shows
+ *   which specific months are still open, using what the admin applied each
+ *   payment to. If payments have been recorded but not applied to a month,
+ *   that shows up as `unapplied` rather than silently skewing the aging.
+ *
+ *   Unpaid balances do NOT themselves accrue interest -- they carry forward
+ *   at face value. This matches interest-only hard-money servicing.
+ */
+
+export interface PaymentRow {
+  id: string;
+  payment_date: string;         // YYYY-MM-DD
+  amount: number;
+  method?: string | null;
+  note?: string | null;
+}
+
+export interface AllocationRow {
+  payment_id: string;
+  period_month: string;         // YYYY-MM-01 of the CHARGE period
+  amount: number;
+}
+
+export interface PeriodCharge {
+  periodMonth: string;          // YYYY-MM-01
+  label: string;                // "July 2026"
+  charge: number;
+  paid: number;
+  balance: number;
+}
+
+export interface Ledger {
+  periodMonth: string;
+  periodLabel: string;
+  currentCharge: number;
+  previousBalance: number;
+  paymentsThisPeriod: number;
+  amountDue: number;
+  priorUnpaid: PeriodCharge[];
+  paymentsInPeriod: PaymentRow[];
+  unapplied: number;
+}
+
+const iso = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/** First day of the period a given statement date covers (the month before). */
+export function periodMonthFor(statementDate: string): string {
+  return firstOfMonth(statementDate, -1);
+}
+
+/** Last day of a period month. */
+export function periodEndOf(periodMonth: string): string {
+  const [y, m] = periodMonth.slice(0, 10).split('-').map(Number);
+  return iso(new Date(y, m, 0));
+}
+
+/** Every charge period from the closing month through `periodMonth`, oldest first. */
+export function periodsThrough(closingDate: string, periodMonth: string): string[] {
+  const out: string[] = [];
+  let cur = firstOfMonth(closingDate);
+  for (let i = 0; i < 600 && cur <= periodMonth; i++) {
+    out.push(cur);
+    cur = firstOfMonth(cur, 1);
+  }
+  return out;
+}
+
+/** Interest charged for one period. */
+export function chargeForPeriod(loan: Loan, draws: Draw[], periodMonth: string): number {
+  return buildStatement(loan, draws, firstOfMonth(periodMonth, 1)).amountDue;
+}
+
+/**
+ * Build the full ledger for the statement dated `statementDate`.
+ * Everything is as of that statement's period end -- later payments and
+ * later charges do not appear, exactly like draws.
+ */
+export function buildLedger(
+  loan: Loan,
+  draws: Draw[],
+  payments: PaymentRow[],
+  allocations: AllocationRow[],
+  statementDate: string,
+): Ledger {
+  const periodMonth = periodMonthFor(statementDate);
+  const periodStart = periodMonth;
+  const periodEnd = periodEndOf(periodMonth);
+
+  const priorPeriods = periodsThrough(loan.closing_date, periodMonth)
+    .filter(p => p < periodMonth);
+
+  const currentCharge = chargeForPeriod(loan, draws, periodMonth);
+
+  // ---- date-based running balance
+  const paidBefore = payments
+    .filter(p => p.payment_date < periodStart)
+    .reduce((s, p) => s + Number(p.amount), 0);
+
+  const priorCharges = priorPeriods.reduce((s, p) => s + chargeForPeriod(loan, draws, p), 0);
+  const previousBalance = priorCharges - paidBefore;
+
+  const paymentsInPeriod = payments
+    .filter(p => p.payment_date >= periodStart && p.payment_date <= periodEnd)
+    .sort((a, b) => a.payment_date.localeCompare(b.payment_date));
+  const paymentsThisPeriod = paymentsInPeriod.reduce((s, p) => s + Number(p.amount), 0);
+
+  const amountDue = previousBalance - paymentsThisPeriod + currentCharge;
+
+  // ---- allocation-based aging of earlier months
+  const payById = new Map(payments.map(p => [p.id, p]));
+  const asOfAllocations = allocations.filter(a => {
+    const pay = payById.get(a.payment_id);
+    return pay ? pay.payment_date <= periodEnd : false;
+  });
+
+  const paidByPeriod = new Map<string, number>();
+  for (const a of asOfAllocations) {
+    const key = firstOfMonth(a.period_month);
+    paidByPeriod.set(key, (paidByPeriod.get(key) ?? 0) + Number(a.amount));
+  }
+
+  const priorUnpaid: PeriodCharge[] = priorPeriods
+    .map(p => {
+      const charge = chargeForPeriod(loan, draws, p);
+      const paid = paidByPeriod.get(p) ?? 0;
+      return { periodMonth: p, label: monthName(p), charge, paid, balance: charge - paid };
+    })
+    .filter(r => r.balance > 0.005);
+
+  // Payments received but not applied to any month yet.
+  const paidToDate = payments
+    .filter(p => p.payment_date <= periodEnd)
+    .reduce((s, p) => s + Number(p.amount), 0);
+  const allocatedToDate = asOfAllocations.reduce((s, a) => s + Number(a.amount), 0);
+  const unapplied = Math.max(0, paidToDate - allocatedToDate);
+
+  return {
+    periodMonth,
+    periodLabel: monthName(periodMonth),
+    currentCharge,
+    previousBalance,
+    paymentsThisPeriod,
+    amountDue,
+    priorUnpaid,
+    paymentsInPeriod,
+    unapplied,
+  };
+}
+
+/**
+ * Outstanding balance per period as of today, for the "apply this payment to"
+ * picker. Oldest first, already-settled months dropped.
+ */
+export function openCharges(
+  loan: Loan,
+  draws: Draw[],
+  payments: PaymentRow[],
+  allocations: AllocationRow[],
+  throughPeriodMonth: string,
+): PeriodCharge[] {
+  const paidByPeriod = new Map<string, number>();
+  for (const a of allocations) {
+    const key = firstOfMonth(a.period_month);
+    paidByPeriod.set(key, (paidByPeriod.get(key) ?? 0) + Number(a.amount));
+  }
+  return periodsThrough(loan.closing_date, throughPeriodMonth)
+    .map(p => {
+      const charge = chargeForPeriod(loan, draws, p);
+      const paid = paidByPeriod.get(p) ?? 0;
+      return { periodMonth: p, label: monthName(p), charge, paid, balance: charge - paid };
+    })
+    .filter(r => r.charge > 0.005 && r.balance > 0.005);
+}

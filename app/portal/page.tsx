@@ -1,6 +1,8 @@
 import { serverClient } from '@/lib/supabase-server';
 import StatementView from '@/components/StatementView';
 import PortalTitle from '@/components/PortalTitle';
+import LiveRefresh from '@/components/LiveRefresh';
+import { fetchStatementExtras } from '@/lib/statement-data';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,17 +36,25 @@ export default async function PortalPage() {
   }
 
   const drawsByLoan: Record<string, any[]> = {};
+  const extrasByLoan: Record<string, any> = {};
   for (const loan of loans) {
     const { data: draws } = await supabase.from('draw_details').select('*').eq('loan_id', loan.loan_id).order('draw_date');
     drawsByLoan[loan.loan_id] = draws ?? [];
+    extrasByLoan[loan.loan_id] = await fetchStatementExtras(loan.loan_id);
   }
 
   return (
     <>
       <PortalTitle name={borrowerName} />
+      <LiveRefresh />
       {Nav}
       {loans.map((loan: any) => (
-        <StatementView key={loan.loan_id} loan={loan} draws={drawsByLoan[loan.loan_id]} />
+        <StatementView
+          key={loan.loan_id} loan={loan} draws={drawsByLoan[loan.loan_id]}
+          payments={extrasByLoan[loan.loan_id]?.payments}
+          allocations={extrasByLoan[loan.loan_id]?.allocations}
+          payInfo={extrasByLoan[loan.loan_id]?.payInfo}
+        />
       ))}
     </>
   );

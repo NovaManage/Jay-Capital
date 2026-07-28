@@ -2,6 +2,7 @@ import { type NextRequest } from 'next/server';
 import { serviceClient } from '@/lib/supabase-server';
 import { statementPDF } from '@/lib/statement-pdf';
 import { firstOfMonth } from '@/lib/format';
+import { fetchStatementExtras } from '@/lib/statement-data';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,8 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
   const monthParam = new URL(req.url).searchParams.get('month');
   const statementDate = monthParam ? firstOfMonth(monthParam) : firstOfMonth(new Date());
 
-  const pdf = await statementPDF(loan, draws ?? [], statementDate);
+  const extras = await fetchStatementExtras(loan.loan_id);
+  const pdf = await statementPDF(loan, draws ?? [], statementDate, extras);
   const safeName = `Statement_${loan.borrower_name.replace(/[^a-z0-9]+/gi, '_')}_${statementDate}.pdf`;
   return new Response(Buffer.from(pdf), {
     headers: {

@@ -2,7 +2,10 @@
 
 import { useState } from 'react';
 import { money, pct, fmtDate, firstOfMonth, monthName, clampMonth, statementMonths, statementPeriod } from '@/lib/format';
-import { buildStatement, drawInterest, type Draw as EngineDraw } from '@/lib/interest';
+import { drawInterest, buildStatement, type Draw as EngineDraw } from '@/lib/interest';
+import { buildLedger, type PaymentRow, type AllocationRow } from '@/lib/ledger';
+
+export const SERVICER = 'Jay Capital Funding';
 
 export interface StatementData {
   loan_id?: string;
@@ -13,24 +16,31 @@ export interface StatementData {
   accrued_interest: number; access_token: string;
 }
 export interface StatementDraw { draw_date: string; description: string; amount: number; interest_accrued: number | null; }
+export interface PayInfo { method: string | null; instructions: string | null }
 
 export default function StatementView({
-  loan, draws, allowNavigate = true,
-}: { loan: StatementData; draws: StatementDraw[]; allowNavigate?: boolean }) {
-  const months = statementMonths(loan.closing_date);        // newest-first, closing..next month
+  loan, draws, payments = [], allocations = [], payInfo, allowNavigate = true,
+}: {
+  loan: StatementData; draws: StatementDraw[];
+  payments?: PaymentRow[]; allocations?: AllocationRow[];
+  payInfo?: PayInfo | null; allowNavigate?: boolean;
+}) {
+  const months = statementMonths(loan.closing_date);
   const [asOf, setAsOf] = useState(() => clampMonth(firstOfMonth(new Date()), loan.closing_date));
 
   const rate = Number(loan.annual_rate);
+  const engineLoan = {
+    loan_amount: Number(loan.loan_amount), acquisition: Number(loan.acquisition),
+    annual_rate: rate, closing_date: loan.closing_date,
+  };
   const engineDraws: EngineDraw[] = draws.map(d => ({ draw_date: d.draw_date, amount: Number(d.amount), description: d.description }));
-  const stmt = buildStatement(
-    { loan_amount: Number(loan.loan_amount), acquisition: Number(loan.acquisition), annual_rate: rate, closing_date: loan.closing_date },
-    engineDraws, asOf
-  );
+
+  const stmt = buildStatement(engineLoan, engineDraws, asOf);
+  const ledger = buildLedger(engineLoan, engineDraws, payments, allocations, asOf);
   const period = statementPeriod(asOf);
   const shortPeriod = stmt.periodEnd.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   const pdfHref = `/api/statement-pdf/${loan.access_token}?month=${asOf}`;
 
-  // clamp Prev/Next so we can never jump outside the valid list
   const go = (delta: number) => setAsOf(cur => clampMonth(firstOfMonth(cur, delta), loan.closing_date));
 
   return (
@@ -44,9 +54,7 @@ export default function StatementView({
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <button className="btn secondary" onClick={() => go(-1)}>&larr; Prev</button>
               <select className="filter" value={asOf} onChange={e => setAsOf(e.target.value)}>
-                {months.map(m => (
-                  <option key={m} value={m}>{monthName(m)}</option>
-                ))}
+                {months.map(m => <option key={m} value={m}>{monthName(m)}</option>)}
               </select>
               <button className="btn secondary" onClick={() => go(1)}>Next &rarr;</button>
             </div>
@@ -74,14 +82,40 @@ export default function StatementView({
           <div className="row"><span className="k">Acquisition</span><span className="v">{money(loan.acquisition)}</span></div>
           <div className="row"><span className="k">Remaining Draw Balance</span><span className="v">{money(stmt.remainingDraw)}</span></div>
           <div className="row"><span className="k">Construction Budget</span><span className="v">{money(loan.construction)}</span></div>
+          <div className="row"><span className="k">Total Draws {shortPeriod}</span><span className="v">{money(stmt.periodDrawTotal)}</span></div>
           <div className="row"><span className="k">Interest Rate</span><span className="v">{pct(loan.annual_rate)}</span></div>
           <div className="row"><span className="k">Closing Date</span><span className="v">{fmtDate(loan.closing_date)}</span></div>
-          <div className="row"><span className="k">Lender</span><span className="v">{loan.lender_name ?? ''}</span></div>
-          <div className="row"><span className="k">Total Draws {shortPeriod}</span><span className="v">{money(stmt.periodDrawTotal)}</span></div>
-          <div className="row"><span className="k">Base Balance Interest</span><span className="v">{money(stmt.baseInterest)}</span></div>
+          <div className="row"><span className="k">Servicer</span><span className="v">{SERVICER}</span></div>
           <div className="row"><span className="k">Interest Accrued {shortPeriod}</span><span className="v">{money(stmt.periodDrawInterest)}</span></div>
-          <div className="row due"><span className="k">Amount Due</span><span className="v">{money(stmt.amountDue)}</span></div>
         </div>
+
+        {/* Running balance */}
+        <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '26px 0 10px' }}>Account Activity</div>
+        <div className="summary" style={{ gridTemplateColumns: '1fr', maxWidth: 460 }}>
+          <div className="row"><span className="k">Previous Balance</span><span className="v">{money(ledger.previousBalance)}</span></div>
+          <div className="row"><span className="k">Payments Received</span><span className="v">{ledger.paymentsThisPeriod > 0 ? `(${money(ledger.paymentsThisPeriod)})` : money(0)}</span></div>
+          <div className="row"><span className="k">Current Charges</span><span className="v">{money(ledger.currentCharge)}</span></div>
+          <div className="row due"><span className="k">Amount Due</span><span className="v">{money(ledger.amountDue)}</span></div>
+        </div>
+
+        {ledger.paymentsInPeriod.length > 0 && (
+          <>
+            <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '26px 0 12px' }}>Payments Received ({stmt.periodLabel})</div>
+            <table className="bordered">
+              <thead><tr><th>Date</th><th>Method</th><th>Note</th><th className="num">Amount</th></tr></thead>
+              <tbody>
+                {ledger.paymentsInPeriod.map(p => (
+                  <tr key={p.id}>
+                    <td>{fmtDate(p.payment_date)}</td>
+                    <td>{p.method || ''}</td>
+                    <td>{p.note || ''}</td>
+                    <td className="num">{money(p.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
 
         <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '32px 0 16px' }}>Construction Draws ({stmt.periodLabel})</div>
         {stmt.periodDraws.length > 0 ? (
@@ -104,6 +138,43 @@ export default function StatementView({
             </tbody>
           </table>
         ) : <p className="muted">No draws during this period.</p>}
+
+        {ledger.priorUnpaid.length > 0 && (
+          <>
+            <div style={{ color: 'var(--danger)', fontWeight: 700, margin: '32px 0 16px' }}>Unpaid Previous Charges</div>
+            <table className="bordered">
+              <thead><tr><th>Statement Month</th><th className="num">Charged</th><th className="num">Paid</th><th className="num">Still Owed</th></tr></thead>
+              <tbody>
+                {ledger.priorUnpaid.map(r => (
+                  <tr key={r.periodMonth}>
+                    <td>{r.label}</td>
+                    <td className="num">{money(r.charge)}</td>
+                    <td className="num">{money(r.paid)}</td>
+                    <td className="num">{money(r.balance)}</td>
+                  </tr>
+                ))}
+                <tr>
+                  <td style={{ fontWeight: 700, color: 'var(--navy)' }}>Total past due</td>
+                  <td className="num"></td><td className="num"></td>
+                  <td className="num" style={{ fontWeight: 700, color: 'var(--navy)' }}>
+                    {money(ledger.priorUnpaid.reduce((s, r) => s + r.balance, 0))}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </>
+        )}
+
+        {(payInfo?.instructions || payInfo?.method) && (
+          <div style={{ marginTop: 34, background: 'var(--pale)', borderRadius: 8, padding: '18px 20px' }}>
+            <div style={{ color: 'var(--navy)', fontWeight: 700, marginBottom: 6 }}>
+              How to Pay{payInfo.method ? ` \u2014 ${payInfo.method}` : ''}
+            </div>
+            {payInfo.instructions && (
+              <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>{payInfo.instructions}</div>
+            )}
+          </div>
+        )}
 
         <p className="muted" style={{ marginTop: 28, fontSize: 12 }}>
           Questions about this statement? Reply to the email this link was sent from.

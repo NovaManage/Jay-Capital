@@ -12,7 +12,8 @@ export default async function LendersPage() {
     return <div className="wrap"><div className="card"><div className="alert error">Admin only.</div></div></div>;
   }
 
-  const { data: lenders } = await supabase.from('lenders').select('id, name, active').order('name');
+  const { data: lenders } = await supabase
+    .from('lenders').select('id, name, short_name, active, payment_method, payment_instructions').order('name');
   const { data: loans } = await supabase.from('loans').select('lender_id');
 
   const counts = new Map<string, number>();

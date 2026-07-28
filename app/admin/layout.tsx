@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { serverClient } from '@/lib/supabase-server';
+import LiveRefresh from '@/components/LiveRefresh';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <>
+      <LiveRefresh />
       <nav className="nav">
         <span className="brand">JAY CAPITAL</span>
         <Link href="/admin">Portfolio</Link>
