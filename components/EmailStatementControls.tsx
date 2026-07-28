@@ -34,7 +34,12 @@ export default function EmailStatementControls({
     setBusy(true);
     try {
       const res = await emailStatement(loanId, selected);
-      setAlert({ msg: `Sent ${res.count} statement${res.count > 1 ? 's' : ''} to ${res.to}.`, tone: 'success' });
+      if (!res.ok) {
+        setAlert({ msg: res.error || 'Could not send the statements.', tone: 'error' });
+      } else {
+        const n = res.count ?? 0;
+        setAlert({ msg: `Sent ${n} statement${n === 1 ? '' : 's'} to ${res.to}.`, tone: 'success' });
+      }
     } catch (e: any) {
       setAlert({ msg: e.message, tone: 'error' });
     }

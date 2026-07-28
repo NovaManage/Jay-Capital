@@ -19,7 +19,7 @@ export default function NewLoanPage() {
         <h1 className="title">New Loan</h1>
         <div className="rule" />
         {error && <div className="alert error">{error}</div>}
-        <form action={async (fd) => { setBusy(true); setError(''); try { await createLoan(fd); router.push('/admin'); router.refresh(); } catch (e: any) { setError(e.message); setBusy(false); } }}>
+        <form action={async (fd) => { setBusy(true); setError(''); try { const res = await createLoan(fd); if (!res.ok) { setError(res.error || 'Could not create the loan.'); setBusy(false); return; } router.push('/admin'); router.refresh(); } catch (e: any) { setError(e.message); setBusy(false); } }}>
           <div className="form-grid">
             <div className="field-wrap"><label>Borrower Name *</label><input className="field" name="borrower_name" required /></div>
             <div className="field-wrap"><label>Borrower Email</label><input className="field" type="email" name="borrower_email" /></div>

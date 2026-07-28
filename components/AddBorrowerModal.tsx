@@ -36,8 +36,9 @@ export default function AddBorrowerModal({
         mode, tempPassword: mode === 'manual' ? tempPw : undefined,
         emailCredentials: mode === 'manual' ? emailCreds : false,
       });
+      if (!res.ok) { setErr(res.error || 'Could not create the login.'); setBusy(false); return; }
       setOpen(false);
-      setDone(res.message);
+      setDone(res.message || 'Borrower login created.');
       router.refresh();
     } catch (e: any) {
       setErr(e.message);

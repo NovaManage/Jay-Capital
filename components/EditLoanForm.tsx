@@ -33,7 +33,11 @@ export default function EditLoanForm({ loan }: { loan: Loan }) {
         {error && <div className="alert error">{error}</div>}
         <form action={async (fd) => {
           setBusy(true); setError('');
-          try { await updateLoan(loan.loan_id, fd); router.push(`/admin/loans/${loan.loan_id}`); router.refresh(); }
+          try {
+            const res = await updateLoan(loan.loan_id, fd);
+            if (!res.ok) { setError(res.error || 'Could not save the changes.'); setBusy(false); return; }
+            router.push(`/admin/loans/${loan.loan_id}`); router.refresh();
+          }
           catch (e: any) { setError(e.message); setBusy(false); }
         }}>
           <div className="form-grid">

@@ -33,6 +33,7 @@ export default function LoanDetail({ summary, draws, canEdit, canSend }: {
   const [confirmDeleteLoan, setConfirmDeleteLoan] = useState(false);
   const [confirmDeleteDraw, setConfirmDeleteDraw] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const engineDraws: EngineDraw[] = draws.map(d => ({ draw_date: d.draw_date, amount: Number(d.amount), description: d.description }));
   const stmt = buildStatement(
@@ -48,15 +49,17 @@ export default function LoanDetail({ summary, draws, canEdit, canSend }: {
   async function doDeleteLoan() {
     setConfirmDeleteLoan(false);
     setBusy(true);
-    await deleteLoan(summary.loan_id);
+    const res = await deleteLoan(summary.loan_id);
+    if (!res.ok) { setActionError(res.error || 'Could not delete the loan.'); setBusy(false); return; }
     router.push('/admin');
     router.refresh();
   }
   async function doDeleteDraw(id: string) {
     setConfirmDeleteDraw(null);
     setBusy(true);
-    await deleteDraw(summary.loan_id, id);
+    const res = await deleteDraw(summary.loan_id, id);
     setBusy(false);
+    if (!res.ok) { setActionError(res.error || 'Could not delete the draw.'); return; }
     router.refresh();
   }
 
@@ -79,7 +82,13 @@ export default function LoanDetail({ summary, draws, canEdit, canSend }: {
             {canEdit && (
               <>
                 <select className="filter" defaultValue={summary.status} disabled={busy}
-                  onChange={async e => { setBusy(true); await setLoanStatus(summary.loan_id, e.target.value); setBusy(false); router.refresh(); }}>
+                  onChange={async e => {
+                    setBusy(true);
+                    const res = await setLoanStatus(summary.loan_id, e.target.value);
+                    setBusy(false);
+                    if (!res.ok) { setActionError(res.error || 'Could not change the status.'); return; }
+                    router.refresh();
+                  }}>
                   <option value="active">Active</option>
                   <option value="paid_off">Paid off</option>
                   <option value="defaulted">Defaulted</option>
@@ -188,6 +197,13 @@ export default function LoanDetail({ summary, draws, canEdit, canSend }: {
         onCancel={() => setConfirmDeleteDraw(null)}
       />
       <AlertDialog open={copied} title="Copied" message="Borrower link copied to clipboard." tone="success" onClose={() => setCopied(false)} />
+      <AlertDialog
+        open={!!actionError}
+        title="That didn't work"
+        message={actionError || ''}
+        tone="error"
+        onClose={() => setActionError(null)}
+      />
     </div>
   );
 }

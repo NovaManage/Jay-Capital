@@ -22,6 +22,7 @@ export default function SendPortalLinkModal({
     setBusy(true); setErr('');
     try {
       const res = await sendPortalWelcome(loanId, email.trim());
+      if (!res.ok) { setErr(res.error || 'Could not send the welcome email.'); setBusy(false); return; }
       setOpen(false);
       setDone(`Welcome email with the portal link sent to ${res.to}.`);
     } catch (e: any) {

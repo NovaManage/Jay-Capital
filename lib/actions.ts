@@ -1,5 +1,6 @@
 'use server';
 
+import { run } from '@/lib/result';
 import { revalidatePath } from 'next/cache';
 import { serverClient, serviceClient } from '@/lib/supabase-server';
 
@@ -52,158 +53,174 @@ async function upsertLender(supabase: any, name: string): Promise<string | null>
 }
 
 export async function createLoan(form: FormData) {
-  const supabase = await requireAdmin();
-  const borrowerName = String(form.get('borrower_name') || '').trim();
-  if (!borrowerName) throw new Error('Borrower name is required');
+  return run(async () => {
+    const supabase = await requireAdmin();
+    const borrowerName = String(form.get('borrower_name') || '').trim();
+    if (!borrowerName) throw new Error('Borrower name is required');
 
-  const borrowerId = await upsertBorrower(
-    supabase, borrowerName,
-    String(form.get('borrower_email') || '').trim(),
-    String(form.get('borrower_phone') || '').trim()
-  );
-  const lenderId = await upsertLender(supabase, String(form.get('lender_name') || '').trim());
+    const borrowerId = await upsertBorrower(
+      supabase, borrowerName,
+      String(form.get('borrower_email') || '').trim(),
+      String(form.get('borrower_phone') || '').trim()
+    );
+    const lenderId = await upsertLender(supabase, String(form.get('lender_name') || '').trim());
 
-  const loanAmount = Number(form.get('loan_amount') || 0);
-  const acquisition = Number(form.get('acquisition') || 0);
-  const construction = Math.max(0, loanAmount - acquisition); // derived
+    const loanAmount = Number(form.get('loan_amount') || 0);
+    const acquisition = Number(form.get('acquisition') || 0);
+    const construction = Math.max(0, loanAmount - acquisition); // derived
 
-  const { data: nums } = await supabase.from('loans').select('loan_number');
-  const loanNumber = nextLoanNumber((nums ?? []).map((r: any) => r.loan_number));
+    const { data: nums } = await supabase.from('loans').select('loan_number');
+    const loanNumber = nextLoanNumber((nums ?? []).map((r: any) => r.loan_number));
 
-  const { error } = await supabase.from('loans').insert({
-    loan_number: loanNumber,
-    borrower_id: borrowerId,
-    lender_id: lenderId,
-    property: String(form.get('property') || '').trim(),
-    loan_amount: loanAmount,
-    acquisition,
-    construction,
-    annual_rate: Number(form.get('annual_rate') || 0) / 100,
-    closing_date: String(form.get('closing_date') || ''),
+    const { error } = await supabase.from('loans').insert({
+      loan_number: loanNumber,
+      borrower_id: borrowerId,
+      lender_id: lenderId,
+      property: String(form.get('property') || '').trim(),
+      loan_amount: loanAmount,
+      acquisition,
+      construction,
+      annual_rate: Number(form.get('annual_rate') || 0) / 100,
+      closing_date: String(form.get('closing_date') || ''),
+    });
+    if (error) throw new Error(error.message);
+    revalidatePath('/admin');
   });
-  if (error) throw new Error(error.message);
-  revalidatePath('/admin');
 }
 
 export async function updateLoan(loanId: string, form: FormData) {
-  const supabase = await requireAdmin();
+  return run(async () => {
+    const supabase = await requireAdmin();
 
-  // Update borrower fields on the loan's borrower record.
-  const { data: loan } = await supabase.from('loans').select('borrower_id').eq('id', loanId).single();
-  if (loan?.borrower_id) {
-    await supabase.from('borrowers').update({
-      name: String(form.get('borrower_name') || '').trim(),
-      email: String(form.get('borrower_email') || '').trim() || null,
-      phone: String(form.get('borrower_phone') || '').trim() || null,
-    }).eq('id', loan.borrower_id);
-  }
+    // Update borrower fields on the loan's borrower record.
+    const { data: loan } = await supabase.from('loans').select('borrower_id').eq('id', loanId).single();
+    if (loan?.borrower_id) {
+      await supabase.from('borrowers').update({
+        name: String(form.get('borrower_name') || '').trim(),
+        email: String(form.get('borrower_email') || '').trim() || null,
+        phone: String(form.get('borrower_phone') || '').trim() || null,
+      }).eq('id', loan.borrower_id);
+    }
 
-  const lenderId = await upsertLender(supabase, String(form.get('lender_name') || '').trim());
-  const loanAmount = Number(form.get('loan_amount') || 0);
-  const acquisition = Number(form.get('acquisition') || 0);
-  const construction = Math.max(0, loanAmount - acquisition);
+    const lenderId = await upsertLender(supabase, String(form.get('lender_name') || '').trim());
+    const loanAmount = Number(form.get('loan_amount') || 0);
+    const acquisition = Number(form.get('acquisition') || 0);
+    const construction = Math.max(0, loanAmount - acquisition);
 
-  const { error } = await supabase.from('loans').update({
-    lender_id: lenderId,
-    property: String(form.get('property') || '').trim(),
-    loan_amount: loanAmount,
-    acquisition,
-    construction,
-    annual_rate: Number(form.get('annual_rate') || 0) / 100,
-    closing_date: String(form.get('closing_date') || ''),
-    updated_at: new Date().toISOString(),
-  }).eq('id', loanId);
-  if (error) throw new Error(error.message);
-  revalidatePath('/admin');
-  revalidatePath(`/admin/loans/${loanId}`);
+    const { error } = await supabase.from('loans').update({
+      lender_id: lenderId,
+      property: String(form.get('property') || '').trim(),
+      loan_amount: loanAmount,
+      acquisition,
+      construction,
+      annual_rate: Number(form.get('annual_rate') || 0) / 100,
+      closing_date: String(form.get('closing_date') || ''),
+      updated_at: new Date().toISOString(),
+    }).eq('id', loanId);
+    if (error) throw new Error(error.message);
+    revalidatePath('/admin');
+    revalidatePath(`/admin/loans/${loanId}`);
+  });
 }
 
 export async function deleteLoan(loanId: string) {
-  const supabase = await requireAdmin();
-  // draws cascade on delete; do it explicitly for clarity, then the loan.
-  await supabase.from('draws').delete().eq('loan_id', loanId);
-  await supabase.from('payments').delete().eq('loan_id', loanId);
-  const { error } = await supabase.from('loans').delete().eq('id', loanId);
-  if (error) throw new Error(error.message);
-  revalidatePath('/admin');
+  return run(async () => {
+    const supabase = await requireAdmin();
+    // draws cascade on delete; do it explicitly for clarity, then the loan.
+    await supabase.from('draws').delete().eq('loan_id', loanId);
+    await supabase.from('payments').delete().eq('loan_id', loanId);
+    const { error } = await supabase.from('loans').delete().eq('id', loanId);
+    if (error) throw new Error(error.message);
+    revalidatePath('/admin');
+  });
 }
 
 export async function addDraw(loanId: string, form: FormData) {
-  const supabase = await requireAdmin();
-  const { error } = await supabase.from('draws').insert({
-    loan_id: loanId,
-    draw_date: String(form.get('draw_date') || ''),
-    description: String(form.get('description') || 'Construction Draw').trim() || 'Construction Draw',
-    amount: Number(form.get('amount') || 0),
+  return run(async () => {
+    const supabase = await requireAdmin();
+    const { error } = await supabase.from('draws').insert({
+      loan_id: loanId,
+      draw_date: String(form.get('draw_date') || ''),
+      description: String(form.get('description') || 'Construction Draw').trim() || 'Construction Draw',
+      amount: Number(form.get('amount') || 0),
+    });
+    if (error) throw new Error(error.message);
+    revalidatePath(`/admin/loans/${loanId}`);
+    revalidatePath('/admin');
   });
-  if (error) throw new Error(error.message);
-  revalidatePath(`/admin/loans/${loanId}`);
-  revalidatePath('/admin');
 }
 
 export async function deleteDraw(loanId: string, drawId: string) {
-  const supabase = await requireAdmin();
-  const { error } = await supabase.from('draws').delete().eq('id', drawId);
-  if (error) throw new Error(error.message);
-  revalidatePath(`/admin/loans/${loanId}`);
-  revalidatePath('/admin');
+  return run(async () => {
+    const supabase = await requireAdmin();
+    const { error } = await supabase.from('draws').delete().eq('id', drawId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/admin/loans/${loanId}`);
+    revalidatePath('/admin');
+  });
 }
 
 export async function setLoanStatus(loanId: string, status: string) {
-  const supabase = await requireAdmin();
-  const { error } = await supabase.from('loans').update({ status }).eq('id', loanId);
-  if (error) throw new Error(error.message);
-  revalidatePath(`/admin/loans/${loanId}`);
-  revalidatePath('/admin');
+  return run(async () => {
+    const supabase = await requireAdmin();
+    const { error } = await supabase.from('loans').update({ status }).eq('id', loanId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/admin/loans/${loanId}`);
+    revalidatePath('/admin');
+  });
 }
 
 export async function setUserRole(userId: string, role: 'admin' | 'staff' | 'borrower') {
-  const supabase = await requireAdmin();
-  const { error } = await supabase.from('profiles').update({ role }).eq('id', userId);
-  if (error) throw new Error(error.message);
-  revalidatePath('/admin/users');
+  return run(async () => {
+    const supabase = await requireAdmin();
+    const { error } = await supabase.from('profiles').update({ role }).eq('id', userId);
+    if (error) throw new Error(error.message);
+    revalidatePath('/admin/users');
+  });
 }
 
 export async function importLoansCSV(rows: Record<string, string>[]) {
-  const supabase = await requireAdmin();
-  const results: { loan: string; status: string }[] = [];
-  const { data: nums } = await supabase.from('loans').select('loan_number');
-  let existingNums = (nums ?? []).map((r: any) => r.loan_number);
+  return run(async () => {
+    const supabase = await requireAdmin();
+    const results: { loan: string; status: string }[] = [];
+    const { data: nums } = await supabase.from('loans').select('loan_number');
+    let existingNums = (nums ?? []).map((r: any) => r.loan_number);
 
-  for (const row of rows) {
-    try {
-      const borrowerName = (row['Borrower'] || row['borrower'] || '').trim();
-      if (!borrowerName) { results.push({ loan: '(blank)', status: 'skipped - no borrower' }); continue; }
+    for (const row of rows) {
+      try {
+        const borrowerName = (row['Borrower'] || row['borrower'] || '').trim();
+        if (!borrowerName) { results.push({ loan: '(blank)', status: 'skipped - no borrower' }); continue; }
 
-      const borrowerId = await upsertBorrower(supabase, borrowerName, '', '');
-      const lenderId = await upsertLender(supabase, (row['Lender'] || row['lender'] || '').trim());
+        const borrowerId = await upsertBorrower(supabase, borrowerName, '', '');
+        const lenderId = await upsertLender(supabase, (row['Lender'] || row['lender'] || '').trim());
 
-      const num = (row['Loan ID'] || row['loan_number'] || '').trim() || nextLoanNumber(existingNums);
-      existingNums.push(num);
+        const num = (row['Loan ID'] || row['loan_number'] || '').trim() || nextLoanNumber(existingNums);
+        existingNums.push(num);
 
-      const rate = parseFloat(String(row['Interest Rate'] || row['annual_rate'] || '0').replace('%', ''));
-      const loanAmount = parseFloat(String(row['Loan Amount'] || '0').replace(/[^0-9.\-]/g, '')) || 0;
-      const acquisition = parseFloat(String(row['Acquisition'] || '0').replace(/[^0-9.\-]/g, '')) || 0;
-      const construction = Math.max(0, loanAmount - acquisition);
+        const rate = parseFloat(String(row['Interest Rate'] || row['annual_rate'] || '0').replace('%', ''));
+        const loanAmount = parseFloat(String(row['Loan Amount'] || '0').replace(/[^0-9.\-]/g, '')) || 0;
+        const acquisition = parseFloat(String(row['Acquisition'] || '0').replace(/[^0-9.\-]/g, '')) || 0;
+        const construction = Math.max(0, loanAmount - acquisition);
 
-      const { error } = await supabase.from('loans').insert({
-        loan_number: num,
-        borrower_id: borrowerId,
-        lender_id: lenderId,
-        property: (row['Property'] || row['Address'] || '').trim(),
-        loan_amount: loanAmount,
-        acquisition,
-        construction,
-        annual_rate: rate > 1 ? rate / 100 : rate,
-        closing_date: (row['Closing Date'] || row['closing_date'] || '').trim(),
-      });
-      results.push({ loan: num, status: error ? `error: ${error.message}` : 'imported' });
-    } catch (e: any) {
-      results.push({ loan: '(row)', status: `error: ${e.message}` });
+        const { error } = await supabase.from('loans').insert({
+          loan_number: num,
+          borrower_id: borrowerId,
+          lender_id: lenderId,
+          property: (row['Property'] || row['Address'] || '').trim(),
+          loan_amount: loanAmount,
+          acquisition,
+          construction,
+          annual_rate: rate > 1 ? rate / 100 : rate,
+          closing_date: (row['Closing Date'] || row['closing_date'] || '').trim(),
+        });
+        results.push({ loan: num, status: error ? `error: ${error.message}` : 'imported' });
+      } catch (e: any) {
+        results.push({ loan: '(row)', status: `error: ${e.message}` });
+      }
     }
-  }
-  revalidatePath('/admin');
-  return results;
+    revalidatePath('/admin');
+    return results;
+  });
 }
 
 /**
@@ -213,43 +230,45 @@ export async function importLoansCSV(rows: Record<string, string>[]) {
  */
 export async function inviteAdminUser(opts: {
   email: string; fullName: string; role: 'admin' | 'staff';
-  mode: 'invite' | 'manual'; tempPassword?: string; emailCredentials?: boolean;
+    mode: 'invite' | 'manual'; tempPassword?: string; emailCredentials?: boolean;
 }) {
-  await requireAdmin();
-  const svc = serviceClient();
-  const site = process.env.NEXT_PUBLIC_SITE_URL || '';
-  let userId: string | undefined;
-  let message = '';
+  return run(async () => {
+    await requireAdmin();
+    const svc = serviceClient();
+    const site = process.env.NEXT_PUBLIC_SITE_URL || '';
+    let userId: string | undefined;
+    let message = '';
 
-  if (opts.mode === 'invite') {
-    const { data, error } = await svc.auth.admin.inviteUserByEmail(opts.email, {
-      redirectTo: site ? `${site}/auth/callback?next=/` : undefined,
-      data: { full_name: opts.fullName },
-    });
-    if (error) throw new Error(error.message);
-    userId = data?.user?.id;
-    message = `Invitation emailed to ${opts.email}.`;
-  } else {
-    const { data, error } = await svc.auth.admin.createUser({
-      email: opts.email, password: opts.tempPassword, email_confirm: true,
-      user_metadata: { full_name: opts.fullName },
-    });
-    if (error) throw new Error(error.message);
-    userId = data?.user?.id;
-    message = `Account created for ${opts.email}.`;
-    if (opts.emailCredentials) {
-      await emailCredentials(opts.email, opts.fullName, opts.tempPassword!, site);
-      message += ' Login details were emailed to them.';
+    if (opts.mode === 'invite') {
+      const { data, error } = await svc.auth.admin.inviteUserByEmail(opts.email, {
+        redirectTo: site ? `${site}/auth/callback?next=/` : undefined,
+        data: { full_name: opts.fullName },
+      });
+      if (error) throw new Error(error.message);
+      userId = data?.user?.id;
+      message = `Invitation emailed to ${opts.email}.`;
+    } else {
+      const { data, error } = await svc.auth.admin.createUser({
+        email: opts.email, password: opts.tempPassword, email_confirm: true,
+        user_metadata: { full_name: opts.fullName },
+      });
+      if (error) throw new Error(error.message);
+      userId = data?.user?.id;
+      message = `Account created for ${opts.email}.`;
+      if (opts.emailCredentials) {
+        await emailCredentials(opts.email, opts.fullName, opts.tempPassword!, site);
+        message += ' Login details were emailed to them.';
+      }
     }
-  }
 
-  if (userId) {
-    await svc.from('profiles').upsert({
-      id: userId, email: opts.email, full_name: opts.fullName || null, role: opts.role,
-    }, { onConflict: 'id' });
-  }
-  revalidatePath('/admin/users');
-  return { ok: true, message };
+    if (userId) {
+      await svc.from('profiles').upsert({
+        id: userId, email: opts.email, full_name: opts.fullName || null, role: opts.role,
+      }, { onConflict: 'id' });
+    }
+    revalidatePath('/admin/users');
+    return { ok: true, message };
+  });
 }
 
 /**
@@ -258,46 +277,48 @@ export async function inviteAdminUser(opts: {
  */
 export async function createBorrowerUser(opts: {
   loanId: string; borrowerId: string; email: string; fullName: string;
-  mode: 'invite' | 'manual'; tempPassword?: string; emailCredentials?: boolean;
+    mode: 'invite' | 'manual'; tempPassword?: string; emailCredentials?: boolean;
 }) {
-  await requireStaffOrAdmin();
-  const svc = serviceClient();
-  const site = process.env.NEXT_PUBLIC_SITE_URL || '';
-  let userId: string | undefined;
-  let message = '';
+  return run(async () => {
+    await requireStaffOrAdmin();
+    const svc = serviceClient();
+    const site = process.env.NEXT_PUBLIC_SITE_URL || '';
+    let userId: string | undefined;
+    let message = '';
 
-  if (opts.mode === 'invite') {
-    const { data, error } = await svc.auth.admin.inviteUserByEmail(opts.email, {
-      redirectTo: site ? `${site}/auth/callback?next=/portal` : undefined,
-      data: { full_name: opts.fullName },
-    });
-    if (error) throw new Error(error.message);
-    userId = data?.user?.id;
-    message = `Invitation emailed to ${opts.email}.`;
-  } else {
-    const { data, error } = await svc.auth.admin.createUser({
-      email: opts.email, password: opts.tempPassword, email_confirm: true,
-      user_metadata: { full_name: opts.fullName },
-    });
-    if (error) throw new Error(error.message);
-    userId = data?.user?.id;
-    message = `Borrower account created for ${opts.email}.`;
-    if (opts.emailCredentials) {
-      await emailCredentials(opts.email, opts.fullName, opts.tempPassword!, site);
-      message += ' Login details were emailed to them.';
+    if (opts.mode === 'invite') {
+      const { data, error } = await svc.auth.admin.inviteUserByEmail(opts.email, {
+        redirectTo: site ? `${site}/auth/callback?next=/portal` : undefined,
+        data: { full_name: opts.fullName },
+      });
+      if (error) throw new Error(error.message);
+      userId = data?.user?.id;
+      message = `Invitation emailed to ${opts.email}.`;
+    } else {
+      const { data, error } = await svc.auth.admin.createUser({
+        email: opts.email, password: opts.tempPassword, email_confirm: true,
+        user_metadata: { full_name: opts.fullName },
+      });
+      if (error) throw new Error(error.message);
+      userId = data?.user?.id;
+      message = `Borrower account created for ${opts.email}.`;
+      if (opts.emailCredentials) {
+        await emailCredentials(opts.email, opts.fullName, opts.tempPassword!, site);
+        message += ' Login details were emailed to them.';
+      }
     }
-  }
 
-  if (userId) {
-    await svc.from('profiles').upsert({
-      id: userId, email: opts.email, full_name: opts.fullName || null, role: 'borrower',
-    }, { onConflict: 'id' });
-    // Link borrower record -> auth user (RLS: borrower sees only their loans).
-    await svc.from('borrowers').update({ user_id: userId, email: opts.email }).eq('id', opts.borrowerId);
-  }
-  revalidatePath(`/admin/loans/${opts.loanId}`);
-  revalidatePath('/admin/users');
-  return { ok: true, message };
+    if (userId) {
+      await svc.from('profiles').upsert({
+        id: userId, email: opts.email, full_name: opts.fullName || null, role: 'borrower',
+      }, { onConflict: 'id' });
+      // Link borrower record -> auth user (RLS: borrower sees only their loans).
+      await svc.from('borrowers').update({ user_id: userId, email: opts.email }).eq('id', opts.borrowerId);
+    }
+    revalidatePath(`/admin/loans/${opts.loanId}`);
+    revalidatePath('/admin/users');
+    return { ok: true, message };
+  });
 }
 
 /** Shared: email a newly-created user their temporary login credentials. */

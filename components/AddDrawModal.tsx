@@ -25,7 +25,8 @@ export default function AddDrawModal({ loanId }: { loanId: string }) {
       fd.set('draw_date', date);
       fd.set('amount', amount);
       fd.set('description', 'Construction Draw');
-      await addDraw(loanId, fd);
+      const res = await addDraw(loanId, fd);
+      if (!res.ok) { setErr(res.error || 'Could not add the draw.'); setBusy(false); return; }
       setOpen(false); setDate(''); setAmount('');
       router.refresh();
     } catch (e: any) {

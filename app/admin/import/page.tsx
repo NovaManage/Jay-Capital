@@ -35,6 +35,7 @@ export default function ImportPage() {
   const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [results, setResults] = useState<{ loan: string; status: string }[]>([]);
   const [busy, setBusy] = useState(false);
+  const [importError, setImportError] = useState('');
 
   return (
     <div className="wrap">
@@ -62,11 +63,19 @@ export default function ImportPage() {
               </table>
             </div>
             <button className="btn" style={{ marginTop: 14 }} disabled={busy}
-              onClick={async () => { setBusy(true); setResults(await importLoansCSV(rows)); setBusy(false); }}>
+              onClick={async () => {
+                setBusy(true); setImportError('');
+                const res = await importLoansCSV(rows);
+                if (!res.ok) setImportError(res.error || 'Import failed.');
+                else setResults(res.data ?? []);
+                setBusy(false);
+              }}>
               {busy ? 'Importing\u2026' : `Import ${rows.length} loans`}
             </button>
           </>
         )}
+
+        {importError && <div className="alert error">{importError}</div>}
 
         {results.length > 0 && (
           <div style={{ marginTop: 20 }}>
