@@ -141,8 +141,10 @@ export default function LoanDetail({ summary, draws, canEdit, canSend }: {
         </div>
         <p className="muted" style={{ marginTop: 0 }}>Period: {period.label} {stmt.prepaidAtClosing ? '(closing month - interest prepaid at closing)' : ''}</p>
         <div className="summary">
+          <div className="row"><span className="k">Total disbursed (as of period)</span><span className="v">{money(stmt.totalDisbursed)}</span></div>
+          <div className="row"><span className="k">Total draws this period</span><span className="v">{money(stmt.periodDrawTotal)}</span></div>
           <div className="row"><span className="k">Base balance interest</span><span className="v">{money(stmt.baseInterest)}</span></div>
-          <div className="row"><span className="k">Draw interest (this period)</span><span className="v">{money(stmt.periodDrawInterest)}</span></div>
+          <div className="row"><span className="k">Interest accrued this period</span><span className="v">{money(stmt.periodDrawInterest)}</span></div>
           <div className="row due"><span className="k">Amount Due</span><span className="v">{money(stmt.amountDue)}</span></div>
         </div>
       </div>

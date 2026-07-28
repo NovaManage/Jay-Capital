@@ -16,6 +16,12 @@
  *   This is why period draws are subtracted from the base before applying
  *   the monthly rate -- otherwise they'd be charged twice.
  *
+ *   EVERY figure on a statement is as of that statement's period end.
+ *   Draws dated after the period do not exist on it -- they must not appear
+ *   in the table, in Total Disbursed, in Remaining Draw, or in the base
+ *   balance. Otherwise a back-dated statement bills interest on money that
+ *   had not yet been advanced.
+ *
  *   Rate is monthly (annual/12), prorated by days in that specific month.
  *   NOT a 365-day daily rate: a June draw and a February draw with the same
  *   day count accrue differently. This is intentional.
@@ -106,7 +112,12 @@ export function buildStatement(loan: Loan, draws: Draw[], statementDate: string 
   const periodYM = ym(periodEnd);
 
   const construction = draws.filter(d => d.description === DRAW_DESCRIPTION);
-  const disbursed = totalDisbursed(loan, draws);
+
+  // A statement is a snapshot AS OF its date. Activity that had not happened
+  // by the end of the period does not exist on it -- so every figure below is
+  // built from draws through periodEnd only, never all-time.
+  const throughPeriod = construction.filter(d => ym(parseDate(d.draw_date)) <= periodYM);
+  const disbursed = throughPeriod.reduce((s, d) => s + d.amount, loan.acquisition);
 
   const periodDraws = construction.filter(d => ym(parseDate(d.draw_date)) === periodYM);
   const periodDrawTotal = periodDraws.reduce((s, d) => s + d.amount, 0);

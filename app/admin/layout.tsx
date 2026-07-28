@@ -29,6 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <Link href="/admin">Portfolio</Link>
         {isAdmin && <Link href="/admin/loans/new">New Loan</Link>}
         {isAdmin && <Link href="/admin/import">Import</Link>}
+        {isAdmin && <Link href="/admin/lenders">Lenders</Link>}
         {isAdmin && <Link href="/admin/users">Users</Link>}
         <span className="spacer" />
         <span className={`badge ${role}`}>{role}</span>

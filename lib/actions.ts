@@ -83,25 +83,54 @@ async function linkBorrowerRecords(
 
 async function upsertLender(supabase: any, name: string): Promise<string | null> {
   if (!name) return null;
-  const { data: existing } = await supabase.from('lenders').select('id').eq('name', name).maybeSingle();
-  if (existing) return existing.id;
+  const { data: existing } = await supabase.from('lenders').select('id, active').ilike('name', name).maybeSingle();
+  if (existing) {
+    if (!existing.active) await supabase.from('lenders').update({ active: true }).eq('id', existing.id);
+    return existing.id;
+  }
   const { data: nl, error } = await supabase.from('lenders').insert({ name }).select('id').single();
   if (error) throw new Error(error.message);
   return nl.id;
 }
 
+/** Lender comes from the dropdown (lender_id) or a newly typed name. */
+async function resolveLenderId(supabase: any, form: FormData): Promise<string | null> {
+  const newName = String(form.get('lender_new_name') || '').trim();
+  if (newName) return await upsertLender(supabase, newName);
+  const id = String(form.get('lender_id') || '').trim();
+  return id || null;
+}
+
+/** Everything except the borrower phone is mandatory on a loan. */
+function requireLoanFields(form: FormData, lenderId: string | null) {
+  const need: [string, string][] = [
+    ['borrower_name', 'Borrower name'],
+    ['borrower_email', 'Borrower email'],
+    ['property', 'Property address'],
+    ['loan_amount', 'Loan amount'],
+    ['acquisition', 'Acquisition'],
+    ['annual_rate', 'Interest rate'],
+    ['closing_date', 'Closing date'],
+  ];
+  const missing = need.filter(([k]) => !String(form.get(k) || '').trim()).map(([, label]) => label);
+  if (!lenderId) missing.push('Lender');
+  if (missing.length) {
+    throw new Error(`Please fill in: ${missing.join(', ')}.`);
+  }
+}
+
 export async function createLoan(form: FormData) {
   return run(async () => {
     const supabase = await requireAdmin();
-    const borrowerName = String(form.get('borrower_name') || '').trim();
-    if (!borrowerName) throw new Error('Borrower name is required');
+    const lenderId = await resolveLenderId(supabase, form);
+    requireLoanFields(form, lenderId);
 
+    const borrowerName = String(form.get('borrower_name') || '').trim();
     const borrowerId = await upsertBorrower(
       supabase, borrowerName,
       String(form.get('borrower_email') || '').trim(),
       String(form.get('borrower_phone') || '').trim()
     );
-    const lenderId = await upsertLender(supabase, String(form.get('lender_name') || '').trim());
 
     const loanAmount = Number(form.get('loan_amount') || 0);
     const acquisition = Number(form.get('acquisition') || 0);
@@ -140,7 +169,8 @@ export async function updateLoan(loanId: string, form: FormData) {
       }).eq('id', loan.borrower_id);
     }
 
-    const lenderId = await upsertLender(supabase, String(form.get('lender_name') || '').trim());
+    const lenderId = await resolveLenderId(supabase, form);
+    requireLoanFields(form, lenderId);
     const loanAmount = Number(form.get('loan_amount') || 0);
     const acquisition = Number(form.get('acquisition') || 0);
     const construction = Math.max(0, loanAmount - acquisition);
@@ -261,6 +291,154 @@ export async function importLoansCSV(rows: Record<string, string>[]) {
   });
 }
 
+/* ============================================================
+ * Lender management
+ * ============================================================ */
+
+export async function createLender(name: string) {
+  return run(async () => {
+    await requireAdmin();
+    const clean = name.trim();
+    if (!clean) throw new Error('Lender name is required.');
+    const svc = serviceClient();
+
+    // Reuse the row if the name already exists (possibly inactivated).
+    const { data: existing } = await svc.from('lenders').select('id, active').ilike('name', clean).maybeSingle();
+    if (existing) {
+      if (!existing.active) await svc.from('lenders').update({ active: true }).eq('id', existing.id);
+      revalidatePath('/admin/lenders');
+      return { message: `${clean} is already on the list${existing.active ? '.' : ' and has been reactivated.'}`, id: existing.id };
+    }
+
+    const { data, error } = await svc.from('lenders').insert({ name: clean }).select('id').single();
+    if (error) throw new Error(error.message);
+    revalidatePath('/admin/lenders');
+    revalidatePath('/admin/loans/new');
+    return { message: `${clean} added.`, id: data.id };
+  });
+}
+
+export async function updateLender(id: string, name: string) {
+  return run(async () => {
+    await requireAdmin();
+    const clean = name.trim();
+    if (!clean) throw new Error('Lender name is required.');
+    const { error } = await serviceClient().from('lenders').update({ name: clean }).eq('id', id);
+    if (error) throw new Error(error.message);
+    revalidatePath('/admin/lenders');
+    return { message: 'Lender updated.' };
+  });
+}
+
+export async function setLenderActive(id: string, active: boolean) {
+  return run(async () => {
+    await requireAdmin();
+    const svc = serviceClient();
+    if (!active) {
+      // Inactivating only hides it from NEW loans; existing loans keep it.
+      const { count } = await svc.from('loans').select('id', { count: 'exact', head: true }).eq('lender_id', id);
+      const { error } = await svc.from('lenders').update({ active: false }).eq('id', id);
+      if (error) throw new Error(error.message);
+      revalidatePath('/admin/lenders');
+      return { message: count ? `Inactivated. ${count} existing loan(s) keep this lender; it just won't be offered on new loans.` : 'Lender inactivated.' };
+    }
+    const { error } = await svc.from('lenders').update({ active: true }).eq('id', id);
+    if (error) throw new Error(error.message);
+    revalidatePath('/admin/lenders');
+    return { message: 'Lender reactivated.' };
+  });
+}
+
+/* ============================================================
+ * User management
+ * ============================================================ */
+
+export async function updateUserProfile(userId: string, opts: { fullName: string; email: string; role: 'admin' | 'staff' | 'borrower' }) {
+  return run(async () => {
+    const supabase = await requireAdmin();
+    const { data: { user: me } } = await supabase.auth.getUser();
+    const svc = serviceClient();
+
+    const email = opts.email.trim();
+    if (!email) throw new Error('Email is required.');
+    if (userId === me?.id && opts.role !== 'admin') {
+      throw new Error("You can't change your own role away from admin.");
+    }
+
+    const { data: current } = await svc.from('profiles').select('email').eq('id', userId).maybeSingle();
+    if (current && current.email !== email) {
+      const { error } = await svc.auth.admin.updateUserById(userId, { email, email_confirm: true });
+      if (error) throw new Error(error.message);
+    }
+
+    const { error } = await svc.from('profiles')
+      .update({ email, full_name: opts.fullName.trim() || null, role: opts.role })
+      .eq('id', userId);
+    if (error) throw new Error(error.message);
+
+    revalidatePath('/admin/users');
+    return { message: 'User updated.' };
+  });
+}
+
+export async function setUserActive(userId: string, active: boolean) {
+  return run(async () => {
+    const supabase = await requireAdmin();
+    const { data: { user: me } } = await supabase.auth.getUser();
+    if (userId === me?.id) throw new Error("You can't inactivate your own account.");
+
+    const svc = serviceClient();
+    // Banning is what actually stops them signing in; the flag is for display.
+    const { error: authErr } = await svc.auth.admin.updateUserById(userId, {
+      ban_duration: active ? 'none' : '876000h',   // ~100 years
+    });
+    if (authErr) throw new Error(authErr.message);
+
+    const { error } = await svc.from('profiles').update({ active }).eq('id', userId);
+    if (error) throw new Error(error.message);
+
+    revalidatePath('/admin/users');
+    return { message: active ? 'User reactivated. They can sign in again.' : 'User inactivated. They can no longer sign in.' };
+  });
+}
+
+export async function sendUserPasswordReset(email: string) {
+  return run(async () => {
+    await requireAdmin();
+    const site = process.env.NEXT_PUBLIC_SITE_URL || '';
+    const svc = serviceClient();
+    const { data, error } = await svc.auth.admin.generateLink({
+      type: 'recovery',
+      email: email.trim(),
+      options: { redirectTo: site ? `${site}/auth/callback?next=/auth/set-password` : undefined },
+    });
+    if (error) throw new Error(error.message);
+
+    const link = (data as any)?.properties?.action_link;
+    if (!link) throw new Error('Supabase did not return a reset link.');
+
+    await emailResetLink(email.trim(), link);
+    return { message: `Password reset link emailed to ${email.trim()}.` };
+  });
+}
+
+export async function deleteUser(userId: string) {
+  return run(async () => {
+    const supabase = await requireAdmin();
+    const { data: { user: me } } = await supabase.auth.getUser();
+    if (userId === me?.id) throw new Error("You can't delete your own account.");
+
+    const svc = serviceClient();
+    // Unlink borrower records first so the loans survive the delete.
+    await svc.from('borrowers').update({ user_id: null }).eq('user_id', userId);
+    const { error } = await svc.auth.admin.deleteUser(userId);
+    if (error) throw new Error(error.message);
+
+    revalidatePath('/admin/users');
+    return { message: 'User deleted. Their loans and borrower records were kept.' };
+  });
+}
+
 /**
  * Add an ADMIN or STAFF user. Two modes:
  *  - invite: Supabase emails them a set-password link
@@ -279,7 +457,7 @@ export async function inviteAdminUser(opts: {
 
     if (opts.mode === 'invite') {
       const { data, error } = await svc.auth.admin.inviteUserByEmail(opts.email, {
-        redirectTo: site ? `${site}/auth/callback?next=/` : undefined,
+        redirectTo: site ? `${site}/auth/callback?next=/auth/set-password` : undefined,
         data: { full_name: opts.fullName },
       });
       if (error) throw new Error(error.message);
@@ -336,7 +514,7 @@ export async function createBorrowerUser(opts: {
       message = `${opts.email} already had an account, so this loan was connected to it.`;
     } else if (opts.mode === 'invite') {
       const { data, error } = await svc.auth.admin.inviteUserByEmail(opts.email, {
-        redirectTo: site ? `${site}/auth/callback?next=/portal` : undefined,
+        redirectTo: site ? `${site}/auth/callback?next=/auth/set-password` : undefined,
         data: { full_name: opts.fullName },
       });
       if (error) throw new Error(error.message);
@@ -433,6 +611,27 @@ export async function claimPortalAccount(token: string, password: string) {
         : `Your account is ready. Sign in with ${email} and the password you just chose.`,
     };
   });
+}
+
+/** Email a password-reset link. */
+async function emailResetLink(email: string, link: string) {
+  const nodemailer = (await import('nodemailer')).default;
+  const host = process.env.SMTP_HOST, user = process.env.SMTP_USER, pass = process.env.SMTP_PASS;
+  const port = Number(process.env.SMTP_PORT || 587);
+  if (!host || !user || !pass) throw new Error('SMTP is not configured (SMTP_HOST, SMTP_USER, SMTP_PASS).');
+  const t = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } });
+  const from = process.env.SMTP_FROM || user;
+  const navy = '#1F3864', muted = '#6B7A90';
+  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#F7F9FC;font-family:Arial,Helvetica,sans-serif;color:#333">
+    <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #E4EAF3;border-radius:10px;padding:28px">
+      <div style="color:${navy};font-weight:800;letter-spacing:.04em;font-size:18px;margin-bottom:4px">JAY CAPITAL</div>
+      <div style="height:3px;background:${navy};border-radius:2px;margin:8px 0 20px"></div>
+      <p style="margin:0 0 14px">A password reset was requested for your Jay Capital account.</p>
+      <p style="margin:0 0 18px"><a href="${link}" style="background:${navy};color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;display:inline-block;font-weight:600">Set a new password</a></p>
+      <p style="margin:0 0 6px;color:${muted};font-size:12px;word-break:break-all">Or paste this link into your browser:<br/>${link}</p>
+      <p style="margin:16px 0 0;color:${muted};font-size:13px">If you did not expect this, you can ignore this email.</p>
+    </div></body></html>`;
+  await t.sendMail({ from: `Jay Capital <${from}>`, to: email, replyTo: from, subject: 'Reset your Jay Capital password', html });
 }
 
 /** Shared: email a newly-created user their temporary login credentials. */

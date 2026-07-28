@@ -27,12 +27,11 @@ export default function StatementView({
     engineDraws, asOf
   );
   const period = statementPeriod(asOf);
+  const shortPeriod = stmt.periodEnd.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   const pdfHref = `/api/statement-pdf/${loan.access_token}?month=${asOf}`;
 
   // clamp Prev/Next so we can never jump outside the valid list
   const go = (delta: number) => setAsOf(cur => clampMonth(firstOfMonth(cur, delta), loan.closing_date));
-
-  const construction = draws.filter(d => d.description === 'Construction Draw');
 
   return (
     <div className="wrap" style={{ maxWidth: 960 }}>
@@ -78,17 +77,18 @@ export default function StatementView({
           <div className="row"><span className="k">Interest Rate</span><span className="v">{pct(loan.annual_rate)}</span></div>
           <div className="row"><span className="k">Closing Date</span><span className="v">{fmtDate(loan.closing_date)}</span></div>
           <div className="row"><span className="k">Lender</span><span className="v">{loan.lender_name ?? ''}</span></div>
+          <div className="row"><span className="k">Total Draws {shortPeriod}</span><span className="v">{money(stmt.periodDrawTotal)}</span></div>
           <div className="row"><span className="k">Base Balance Interest</span><span className="v">{money(stmt.baseInterest)}</span></div>
-          <div className="row"><span className="k">Draw Interest (this period)</span><span className="v">{money(stmt.periodDrawInterest)}</span></div>
+          <div className="row"><span className="k">Interest Accrued {shortPeriod}</span><span className="v">{money(stmt.periodDrawInterest)}</span></div>
           <div className="row due"><span className="k">Amount Due</span><span className="v">{money(stmt.amountDue)}</span></div>
         </div>
 
-        <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '8px 0' }}>Construction Draws (since closing)</div>
-        {construction.length > 0 ? (
+        <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '8px 0' }}>Construction Draws ({stmt.periodLabel})</div>
+        {stmt.periodDraws.length > 0 ? (
           <table className="bordered" style={{ marginTop: 4 }}>
             <thead><tr><th>Date</th><th>Description</th><th className="num">Amount</th><th className="num">Interest Accrued</th></tr></thead>
             <tbody>
-              {construction.map((d, i) => (
+              {stmt.periodDraws.map((d, i) => (
                 <tr key={i}>
                   <td>{fmtDate(d.draw_date)}</td>
                   <td>{d.description}</td>
@@ -96,9 +96,14 @@ export default function StatementView({
                   <td className="num">{money(drawInterest(Number(d.amount), rate, d.draw_date))}</td>
                 </tr>
               ))}
+              <tr>
+                <td colSpan={2} style={{ fontWeight: 700, color: 'var(--navy)' }}>Total for period</td>
+                <td className="num" style={{ fontWeight: 700, color: 'var(--navy)' }}>{money(stmt.periodDrawTotal)}</td>
+                <td className="num" style={{ fontWeight: 700, color: 'var(--navy)' }}>{money(stmt.periodDrawInterest)}</td>
+              </tr>
             </tbody>
           </table>
-        ) : <p className="muted">No draw activity on file for this loan.</p>}
+        ) : <p className="muted">No draws during this period.</p>}
 
         <p className="muted" style={{ marginTop: 28, fontSize: 12 }}>
           Questions about this statement? Reply to the email this link was sent from.

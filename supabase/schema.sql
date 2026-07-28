@@ -13,6 +13,7 @@ create table public.profiles (
   email       text not null,
   full_name   text,
   role        user_role not null default 'borrower',
+  active      boolean not null default true,
   created_at  timestamptz not null default now()
 );
 
@@ -31,6 +32,7 @@ create table public.borrowers (
 create table public.lenders (
   id          uuid primary key default uuid_generate_v4(),
   name        text not null unique,
+  active      boolean not null default true,
   created_at  timestamptz not null default now()
 );
 
