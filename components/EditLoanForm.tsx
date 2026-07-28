@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { updateLoan } from '@/lib/actions';
 import { rateFraction } from '@/lib/format';
 import LenderSelect, { type LenderOption } from '@/components/LenderSelect';
+import { formatPhone, formatAddress } from '@/lib/formatting';
 
 interface Loan {
   loan_id: string; loan_number: string; property: string; loan_amount: number;
@@ -21,6 +22,8 @@ export default function EditLoanForm({ loan, lenders }: { loan: Loan; lenders: L
   const [error, setError] = useState('');
   const [loanAmount, setLoanAmount] = useState(Number(loan.loan_amount));
   const [acquisition, setAcquisition] = useState(Number(loan.acquisition));
+  const [phone, setPhone] = useState(formatPhone(loan.borrower_phone ?? ''));
+  const [property, setProperty] = useState(loan.property);
   const construction = Math.max(0, loanAmount - acquisition);
 
   // annual_rate stored as fraction; show as percent
@@ -45,8 +48,8 @@ export default function EditLoanForm({ loan, lenders }: { loan: Loan; lenders: L
           <div className="form-grid">
             <div className="field-wrap"><label>Borrower Name *</label><input className="field" name="borrower_name" defaultValue={loan.borrower_name} required /></div>
             <div className="field-wrap"><label>Borrower Email *</label><input className="field" type="email" name="borrower_email" defaultValue={loan.borrower_email ?? ''} required /></div>
-            <div className="field-wrap"><label>Borrower Phone</label><input className="field" name="borrower_phone" defaultValue={loan.borrower_phone ?? ''} /></div>
-            <div className="field-wrap" style={{ gridColumn: '1 / -1' }}><label>Property Address (full)</label><input className="field" name="property" defaultValue={loan.property} required /></div>
+            <div className="field-wrap"><label>Borrower Phone</label><input className="field" name="borrower_phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(formatPhone(e.target.value))} placeholder="(555) 123-4567" /></div>
+            <div className="field-wrap" style={{ gridColumn: '1 / -1' }}><label>Property Address (full)</label><input className="field" name="property" required value={property} onChange={e => setProperty(e.target.value)} onBlur={e => setProperty(formatAddress(e.target.value))} /></div>
             <LenderSelect lenders={lenders} currentId={loan.lender_id ?? null} currentName={loan.lender_name} />
             <div className="field-wrap"><label>Loan Amount *</label><input className="field" type="number" step="0.01" name="loan_amount" value={loanAmount} onChange={e => setLoanAmount(Number(e.target.value))} required /></div>
             <div className="field-wrap"><label>Acquisition *</label><input className="field" type="number" step="0.01" name="acquisition" value={acquisition} onChange={e => setAcquisition(Number(e.target.value))} required /></div>

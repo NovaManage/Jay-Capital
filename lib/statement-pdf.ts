@@ -123,9 +123,9 @@ export async function statementPDF(loan: StatementLoan, draws: StatementDraw[], 
   y = Math.min(leftEnd, rightEnd) - 24;
 
   // ---- Draw table: THIS PERIOD ONLY
-  ensure(40);
+  ensure(58);
   text(`Construction Draws (${stmt.periodLabel})`, M, y + 6, 11, bold, NAVY);
-  y -= 10;
+  y -= 28;   // breathing room between the heading and the table header
   page.drawRectangle({ x: M, y: y - 4, width: width - 2 * M, height: 20, color: NAVY_MED });
   text('DATE', M + 6, y + 2, 9, bold, rgb(1, 1, 1));
   text('DESCRIPTION', M + 96, y + 2, 9, bold, rgb(1, 1, 1));

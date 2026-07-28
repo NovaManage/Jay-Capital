@@ -83,9 +83,9 @@ export default function StatementView({
           <div className="row due"><span className="k">Amount Due</span><span className="v">{money(stmt.amountDue)}</span></div>
         </div>
 
-        <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '8px 0' }}>Construction Draws ({stmt.periodLabel})</div>
+        <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '32px 0 16px' }}>Construction Draws ({stmt.periodLabel})</div>
         {stmt.periodDraws.length > 0 ? (
-          <table className="bordered" style={{ marginTop: 4 }}>
+          <table className="bordered">
             <thead><tr><th>Date</th><th>Description</th><th className="num">Amount</th><th className="num">Interest Accrued</th></tr></thead>
             <tbody>
               {stmt.periodDraws.map((d, i) => (

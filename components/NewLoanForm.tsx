@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createLoan } from '@/lib/actions';
 import LenderSelect, { type LenderOption } from '@/components/LenderSelect';
+import { formatPhone, formatAddress } from '@/lib/formatting';
 
 export default function NewLoanForm({ lenders }: { lenders: LenderOption[] }) {
   const router = useRouter();
@@ -12,6 +13,8 @@ export default function NewLoanForm({ lenders }: { lenders: LenderOption[] }) {
   const [error, setError] = useState('');
   const [loanAmount, setLoanAmount] = useState(0);
   const [acquisition, setAcquisition] = useState(0);
+  const [phone, setPhone] = useState('');
+  const [property, setProperty] = useState('');
   const construction = Math.max(0, loanAmount - acquisition);
 
   return (
@@ -32,10 +35,23 @@ export default function NewLoanForm({ lenders }: { lenders: LenderOption[] }) {
           <div className="form-grid">
             <div className="field-wrap"><label>Borrower Name *</label><input className="field" name="borrower_name" required /></div>
             <div className="field-wrap"><label>Borrower Email *</label><input className="field" type="email" name="borrower_email" required /></div>
-            <div className="field-wrap"><label>Borrower Phone</label><input className="field" name="borrower_phone" /></div>
+            <div className="field-wrap">
+              <label>Borrower Phone</label>
+              <input
+                className="field" name="borrower_phone" type="tel" inputMode="tel"
+                value={phone} onChange={e => setPhone(formatPhone(e.target.value))}
+                placeholder="(555) 123-4567"
+              />
+            </div>
             <div className="field-wrap" style={{ gridColumn: '1 / -1' }}>
               <label>Property Address (full) *</label>
-              <input className="field" name="property" placeholder="123 Main St, Springfield, IL 62704" required />
+              <input
+                className="field" name="property" required
+                value={property}
+                onChange={e => setProperty(e.target.value)}
+                onBlur={e => setProperty(formatAddress(e.target.value))}
+                placeholder="123 Main St, Springfield, IL 62704"
+              />
             </div>
             <LenderSelect lenders={lenders} />
             <div className="field-wrap"><label>Loan Amount *</label><input className="field" type="number" step="0.01" name="loan_amount" value={loanAmount || ''} onChange={e => setLoanAmount(Number(e.target.value))} required /></div>
