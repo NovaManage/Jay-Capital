@@ -92,13 +92,27 @@ export default function StatementView({
         </div>
 
         {/* Running balance */}
-        <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '28px 0 8px' }}>Account Activity</div>
-        <div className="summary" style={{ gridTemplateColumns: '1fr', maxWidth: 460 }}>
-          <div className="row"><span className="k">Previous Balance</span><span className="v">{money(ledger.previousBalance)}</span></div>
-          <div className="row"><span className="k">Payments Received</span><span className="v">{ledger.paymentsThisPeriod > 0 ? `(${money(ledger.paymentsThisPeriod)})` : money(0)}</span></div>
-          <div className="row"><span className="k">Previous Open Balance</span><span className="v">{money(ledger.previousOpenBalance)}</span></div>
-          <div className="row"><span className="k">Current Charges</span><span className="v">{money(ledger.currentCharge)}</span></div>
-          <div className="row due"><span className="k">Amount Due</span><span className="v">{money(ledger.amountDue)}</span></div>
+        {/* Its own bordered panel with a navy header bar -- the same visual
+            language as the tables below. As a bare heading over .summary rows
+            it read as a continuation of the loan details above. */}
+        <div style={{
+          marginTop: 36, maxWidth: 460,
+          border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden',
+        }}>
+          <div style={{
+            background: 'var(--navy-med)', color: '#fff', fontWeight: 700,
+            fontSize: 12, textTransform: 'uppercase', letterSpacing: '.03em',
+            padding: '11px 14px',
+          }}>
+            Account Activity
+          </div>
+          <div className="summary" style={{ gridTemplateColumns: '1fr', margin: 0, padding: '6px 14px 14px' }}>
+            <div className="row"><span className="k">Previous Balance</span><span className="v">{money(ledger.previousBalance)}</span></div>
+            <div className="row"><span className="k">Payments Received</span><span className="v">{ledger.paymentsThisPeriod > 0 ? `(${money(ledger.paymentsThisPeriod)})` : money(0)}</span></div>
+            <div className="row"><span className="k">Previous Open Balance</span><span className="v">{money(ledger.previousOpenBalance)}</span></div>
+            <div className="row"><span className="k">Current Charges</span><span className="v">{money(ledger.currentCharge)}</span></div>
+            <div className="row due"><span className="k">Amount Due</span><span className="v">{money(ledger.amountDue)}</span></div>
+          </div>
         </div>
 
         {ledger.paymentsInPeriod.length > 0 && (
