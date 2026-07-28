@@ -134,12 +134,12 @@ export async function statementPDF(
   rightText(money(ledger.amountDue), rightR - 10, rightEnd + 2, 12, bold, NAVY);
   rightEnd -= 26;
 
-  y = Math.min(leftEnd, rightEnd) - 24;
+  y = Math.min(leftEnd, rightEnd) - 18;
 
   // ---- Draw table: THIS PERIOD ONLY
   ensure(58);
   text(`Construction Draws (${stmt.periodLabel})`, M, y + 6, 11, bold, NAVY);
-  y -= 28;   // breathing room between the heading and the table header
+  y -= 18;   // heading sits close to its table, with a little white space
   page.drawRectangle({ x: M, y: y - 4, width: width - 2 * M, height: 20, color: NAVY_MED });
   text('DATE', M + 6, y + 2, 9, bold, rgb(1, 1, 1));
   text('DESCRIPTION', M + 96, y + 2, 9, bold, rgb(1, 1, 1));
@@ -169,9 +169,9 @@ export async function statementPDF(
 
   // ---- payments received this period
   if (ledger.paymentsInPeriod.length) {
-    y -= 22; ensure(50);
+    y -= 16; ensure(50);
     text(`Payments Received (${stmt.periodLabel})`, M, y + 6, 11, bold, NAVY);
-    y -= 28;
+    y -= 18;
     page.drawRectangle({ x: M, y: y - 4, width: width - 2 * M, height: 20, color: NAVY_MED });
     text('DATE', M + 6, y + 2, 9, bold, rgb(1, 1, 1));
     text('METHOD', M + 96, y + 2, 9, bold, rgb(1, 1, 1));
@@ -191,9 +191,9 @@ export async function statementPDF(
 
   // ---- anything still open from earlier months
   if (ledger.priorUnpaid.length) {
-    y -= 22; ensure(60);
+    y -= 16; ensure(60);
     text('Unpaid Previous Charges', M, y + 6, 11, bold, rgb(0x8a / 255, 0x1c / 255, 0x18 / 255));
-    y -= 28;
+    y -= 18;
     page.drawRectangle({ x: M, y: y - 4, width: width - 2 * M, height: 20, color: NAVY_MED });
     text('STATEMENT MONTH', M + 6, y + 2, 9, bold, rgb(1, 1, 1));
     rightText('CHARGED', M + 300, y + 2, 9, bold, rgb(1, 1, 1));
@@ -220,7 +220,7 @@ export async function statementPDF(
   if (pay && (pay.instructions || pay.method)) {
     const lines = String(pay.instructions || '').split(/\r?\n/).filter(l => l.trim() !== '');
     const boxH = 30 + lines.length * 13;
-    y -= 24;
+    y -= 18;
     if (y - boxH < 60) { page = doc.addPage([612, 792]); y = 748; }
     page.drawRectangle({ x: M, y: y - boxH + 14, width: width - 2 * M, height: boxH, color: PALE });
     text(`How to Pay${pay.method ? ' -- ' + pay.method : ''}`, M + 12, y, 11, bold, NAVY);
@@ -232,7 +232,7 @@ export async function statementPDF(
     y -= 14;
   }
 
-  y -= 16; ensure(14);
+  y -= 12; ensure(14);
   text('Questions about this statement? Reply directly to the email this was sent from.', M, y, 9, font, MUTED);
 
   return await doc.save();

@@ -90,7 +90,7 @@ export default function StatementView({
         </div>
 
         {/* Running balance */}
-        <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '26px 0 10px' }}>Account Activity</div>
+        <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '28px 0 8px' }}>Account Activity</div>
         <div className="summary" style={{ gridTemplateColumns: '1fr', maxWidth: 460 }}>
           <div className="row"><span className="k">Previous Balance</span><span className="v">{money(ledger.previousBalance)}</span></div>
           <div className="row"><span className="k">Payments Received</span><span className="v">{ledger.paymentsThisPeriod > 0 ? `(${money(ledger.paymentsThisPeriod)})` : money(0)}</span></div>
@@ -100,7 +100,7 @@ export default function StatementView({
 
         {ledger.paymentsInPeriod.length > 0 && (
           <>
-            <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '26px 0 12px' }}>Payments Received ({stmt.periodLabel})</div>
+            <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '28px 0 8px' }}>Payments Received ({stmt.periodLabel})</div>
             <table className="bordered">
               <thead><tr><th>Date</th><th>Method</th><th>Note</th><th className="num">Amount</th></tr></thead>
               <tbody>
@@ -117,7 +117,7 @@ export default function StatementView({
           </>
         )}
 
-        <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '32px 0 16px' }}>Construction Draws ({stmt.periodLabel})</div>
+        <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '28px 0 8px' }}>Construction Draws ({stmt.periodLabel})</div>
         {stmt.periodDraws.length > 0 ? (
           <table className="bordered">
             <thead><tr><th>Date</th><th>Description</th><th className="num">Amount</th><th className="num">Interest Accrued</th></tr></thead>
@@ -141,7 +141,7 @@ export default function StatementView({
 
         {ledger.priorUnpaid.length > 0 && (
           <>
-            <div style={{ color: 'var(--danger)', fontWeight: 700, margin: '32px 0 16px' }}>Unpaid Previous Charges</div>
+            <div style={{ color: 'var(--danger)', fontWeight: 700, margin: '28px 0 8px' }}>Unpaid Previous Charges</div>
             <table className="bordered">
               <thead><tr><th>Statement Month</th><th className="num">Charged</th><th className="num">Paid</th><th className="num">Still Owed</th></tr></thead>
               <tbody>
