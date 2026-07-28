@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { money, pct, fmtDate, firstOfMonth, monthName, clampMonth, statementMonths, statementPeriod } from '@/lib/format';
+import { money, pct, fmtDate, firstOfMonth, monthName, clampMonth, statementMonths } from '@/lib/format';
 import { buildStatement, drawInterest, type Draw as EngineDraw } from '@/lib/interest';
 import { deleteDraw, setLoanStatus, deleteLoan, deletePayment } from '@/lib/actions';
 import { buildLedger, type PaymentRow, type AllocationRow } from '@/lib/ledger';
@@ -49,7 +49,6 @@ export default function LoanDetail({
   const engineDraws: EngineDraw[] = draws.map(d => ({ draw_date: d.draw_date, amount: Number(d.amount), description: d.description }));
   const stmt = buildStatement(engineLoan, engineDraws, stmtDate);
   const ledger = buildLedger(engineLoan, engineDraws, payments, allocations, stmtDate);
-  const period = statementPeriod(stmtDate);
 
   const statementUrl = typeof window !== 'undefined' ? `${window.location.origin}/statement/${summary.access_token}` : '';
   const pdfHref = `/api/statement-pdf/${summary.access_token}?month=${stmtDate}`;
@@ -148,7 +147,7 @@ export default function LoanDetail({
             <a className="btn" href={pdfHref} target="_blank" rel="noopener">Download PDF</a>
           </div>
         </div>
-        <p className="muted" style={{ marginTop: 0 }}>Period: {period.label} {stmt.prepaidAtClosing ? '(closing month - interest prepaid at closing)' : ''}</p>
+        <p className="muted" style={{ marginTop: 0 }}>Statement date {fmtDate(stmtDate)}{stmt.prepaidAtClosing ? ' \u00b7 closing month, interest prepaid at closing' : ''}</p>
         <div className="summary">
           <div className="row"><span className="k">Total disbursed (as of period)</span><span className="v">{money(stmt.totalDisbursed)}</span></div>
           <div className="row"><span className="k">Total draws this period</span><span className="v">{money(stmt.periodDrawTotal)}</span></div>
@@ -161,7 +160,7 @@ export default function LoanDetail({
         </div>
         {ledger.priorUnpaid.length > 0 && (
           <p className="muted" style={{ marginBottom: 0 }}>
-            Past due: {ledger.priorUnpaid.map(r => `${r.label} ${money(r.balance)}`).join(' \u00b7 ')}
+            Past due: {ledger.priorUnpaid.map(r => `${fmtDate(r.statementDate)} ${money(r.balance)}`).join(' \u00b7 ')}
           </p>
         )}
         {ledger.unapplied > 0.005 && (

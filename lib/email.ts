@@ -47,10 +47,12 @@ export async function emailStatement(loanId: string, months: string[]) {
     const cleanMonths = Array.from(new Set(months.map(m => firstOfMonth(m)))).sort();
     if (cleanMonths.length === 0) throw new Error('Pick at least one statement month.');
 
+    const extras = await fetchStatementExtras(loanId);
+
     // Attach a PDF per month.
     const attachments = [];
     for (const m of cleanMonths) {
-      const pdf = await statementPDF(loan, drawList, m);
+      const pdf = await statementPDF(loan, drawList, m, extras);
       attachments.push({
         filename: `Statement_${loan.borrower_name.replace(/[^a-z0-9]+/gi, '_')}_${m}.pdf`,
         content: Buffer.from(pdf),
@@ -60,14 +62,18 @@ export async function emailStatement(loanId: string, months: string[]) {
 
     // Amount-due summary line(s) for the body.
     const engineDraws: EngineDraw[] = drawList.map((d: any) => ({ draw_date: d.draw_date, amount: Number(d.amount), description: d.description }));
+    const engineLoan = {
+      loan_amount: Number(loan.loan_amount), acquisition: Number(loan.acquisition),
+      annual_rate: Number(loan.annual_rate), closing_date: loan.closing_date,
+    };
     const dues = cleanMonths.map(m => {
-      const s = buildStatement({ loan_amount: Number(loan.loan_amount), acquisition: Number(loan.acquisition), annual_rate: Number(loan.annual_rate), closing_date: loan.closing_date }, engineDraws, m);
-      return { label: s.periodLabel, due: s.amountDue };
+      const l = buildLedger(engineLoan, engineDraws, extras.payments, extras.allocations, m);
+      return { label: fmtDate(m), due: l.amountDue };
     });
 
     const multi = cleanMonths.length > 1;
     const subject = multi
-      ? `Your Jay Capital statements (${dues.length} months) \u2014 ${loan.property}`
+      ? `Your Jay Capital statements (${dues.length}) \u2014 ${loan.property}`
       : `Your Jay Capital statement \u2014 ${dues[0].label}`;
 
     const navy = '#1F3864', muted = '#6B7A90', pale = '#EEF2F9';
@@ -80,9 +86,9 @@ export async function emailStatement(loanId: string, months: string[]) {
         <div style="color:${navy};font-weight:800;letter-spacing:.04em;font-size:18px;margin-bottom:4px">JAY CAPITAL</div>
         <div style="height:3px;background:${navy};border-radius:2px;margin:8px 0 20px"></div>
         <p style="margin:0 0 14px">Hi ${loan.borrower_name.split(' ')[0] || loan.borrower_name},</p>
-        <p style="margin:0 0 14px">Please find ${multi ? 'your statements' : 'your statement'} attached for <b>${loan.property}</b>${multi ? '' : `, for ${dues[0].label}`}. ${multi ? 'A summary of the amounts due is below.' : `The amount due is <b>${money(dues[0].due)}</b>.`}</p>
+        <p style="margin:0 0 14px">Please find ${multi ? 'your statements' : 'your statement'} attached for <b>${loan.property}</b>${multi ? '' : `, dated ${dues[0].label}`}. ${multi ? 'A summary of the amounts due is below.' : `The amount due is <b>${money(dues[0].due)}</b>.`}</p>
         ${multi ? `<table style="width:100%;border-collapse:collapse;background:${pale};border-radius:8px;padding:8px;margin:0 0 16px">
-          <tr><td style="padding:8px 12px 4px;color:${muted};font-size:12px;text-transform:uppercase">Statement Month</td><td style="padding:8px 12px 4px;color:${muted};font-size:12px;text-transform:uppercase;text-align:right">Amount Due</td></tr>
+          <tr><td style="padding:8px 12px 4px;color:${muted};font-size:12px;text-transform:uppercase">Statement Date</td><td style="padding:8px 12px 4px;color:${muted};font-size:12px;text-transform:uppercase;text-align:right">Amount Due</td></tr>
           ${dueRows.replace(/padding:6px 0/g, 'padding:6px 12px')}
         </table>` : ''}
         <p style="margin:0 0 14px">The attached PDF${multi ? 's include' : ' includes'} the full breakdown of draws and interest. If you have any questions, just reply to this email.</p>

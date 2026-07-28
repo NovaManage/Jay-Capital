@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { buildStatement, drawInterest, type Draw as EngineDraw } from '@/lib/interest';
-import { money, pct, fmtDate, statementPeriod } from '@/lib/format';
+import { money, pct, fmtDate } from '@/lib/format';
 import { buildLedger, type PaymentRow, type AllocationRow } from '@/lib/ledger';
 import type { StatementLoan, StatementDraw } from '@/lib/statement-html';
 
@@ -37,8 +37,6 @@ export async function statementPDF(
   const engineDraws: EngineDraw[] = draws.map(d => ({ draw_date: d.draw_date, amount: Number(d.amount), description: d.description }));
   const stmt = buildStatement(engineLoan, engineDraws, statementDate);
   const ledger = buildLedger(engineLoan, engineDraws, extras.payments ?? [], extras.allocations ?? [], statementDate);
-  const period = statementPeriod(String(statementDate).slice(0, 10));
-  const shortPeriod = stmt.periodEnd.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
   const doc = await PDFDocument.create();
   let page = doc.addPage([612, 792]); // US Letter
@@ -80,9 +78,7 @@ export async function statementPDF(
 
   let ry = topY;
   rightText('Statement Date', width - M, ry, 9, font, MUTED); ry -= 14;
-  rightText(fmtDate(statementDate), width - M, ry, 11, bold, NAVY); ry -= 16;
-  rightText('Period', width - M, ry, 9, font, MUTED); ry -= 12;
-  rightText(period.label, width - M, ry, 9, font, INK);
+  rightText(fmtDate(statementDate), width - M, ry, 11, bold, NAVY);
 
   y = Math.min(y, ry) - 26;
 
@@ -103,8 +99,8 @@ export async function statementPDF(
   const rightRows: [string, string][] = [
     ['Total Disbursed', money(stmt.totalDisbursed)],
     ['Remaining Draw Balance', money(stmt.remainingDraw)],
-    [`Total Draws ${shortPeriod}`, money(stmt.periodDrawTotal)],
-    [`Interest Accrued ${shortPeriod}`, money(stmt.periodDrawInterest)],
+    ['Total Draws', money(stmt.periodDrawTotal)],
+    ['Interest Accrued', money(stmt.periodDrawInterest)],
     ['Previous Balance', money(ledger.previousBalance)],
     ['Payments Received', ledger.paymentsThisPeriod > 0 ? `(${money(ledger.paymentsThisPeriod)})` : money(0)],
     ['Current Charges', money(ledger.currentCharge)],
@@ -138,7 +134,7 @@ export async function statementPDF(
 
   // ---- Draw table: THIS PERIOD ONLY
   ensure(58);
-  text(`Construction Draws (${stmt.periodLabel})`, M, y + 6, 11, bold, NAVY);
+  text('Construction Draws', M, y + 6, 11, bold, NAVY);
   y -= 18;   // heading sits close to its table, with a little white space
   page.drawRectangle({ x: M, y: y - 4, width: width - 2 * M, height: 20, color: NAVY_MED });
   text('DATE', M + 6, y + 2, 9, bold, rgb(1, 1, 1));
@@ -148,7 +144,7 @@ export async function statementPDF(
   y -= 22;
 
   if (stmt.periodDraws.length === 0) {
-    text('No draws during this period.', M + 6, y, 10, font, MUTED);
+    text('No draws on this statement.', M + 6, y, 10, font, MUTED);
     y -= 18;
   } else {
     for (const d of stmt.periodDraws) {
@@ -170,7 +166,7 @@ export async function statementPDF(
   // ---- payments received this period
   if (ledger.paymentsInPeriod.length) {
     y -= 16; ensure(50);
-    text(`Payments Received (${stmt.periodLabel})`, M, y + 6, 11, bold, NAVY);
+    text('Payments Received', M, y + 6, 11, bold, NAVY);
     y -= 18;
     page.drawRectangle({ x: M, y: y - 4, width: width - 2 * M, height: 20, color: NAVY_MED });
     text('DATE', M + 6, y + 2, 9, bold, rgb(1, 1, 1));
@@ -195,14 +191,14 @@ export async function statementPDF(
     text('Unpaid Previous Charges', M, y + 6, 11, bold, rgb(0x8a / 255, 0x1c / 255, 0x18 / 255));
     y -= 18;
     page.drawRectangle({ x: M, y: y - 4, width: width - 2 * M, height: 20, color: NAVY_MED });
-    text('STATEMENT MONTH', M + 6, y + 2, 9, bold, rgb(1, 1, 1));
+    text('STATEMENT DATE', M + 6, y + 2, 9, bold, rgb(1, 1, 1));
     rightText('CHARGED', M + 300, y + 2, 9, bold, rgb(1, 1, 1));
     rightText('PAID', M + 400, y + 2, 9, bold, rgb(1, 1, 1));
     rightText('STILL OWED', width - M - 6, y + 2, 9, bold, rgb(1, 1, 1));
     y -= 22;
     for (const r of ledger.priorUnpaid) {
       ensure(18);
-      text(r.label, M + 6, y, 9);
+      text(fmtDate(r.statementDate), M + 6, y, 9);
       rightText(money(r.charge), M + 300, y, 9);
       rightText(money(r.paid), M + 400, y, 9);
       rightText(money(r.balance), width - M - 6, y, 9);

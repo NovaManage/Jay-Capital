@@ -122,15 +122,14 @@ export default function AddPaymentModal({
               <p className="muted" style={{ margin: 0 }}>Nothing is currently outstanding on this loan.</p>
             ) : (
               <table className="bordered">
-                <thead><tr><th>Charge Period</th><th>Bills On</th><th className="num">Charged</th><th className="num">Open</th><th className="num">Apply</th></tr></thead>
+                <thead><tr><th>Statement Date</th><th className="num">Charged</th><th className="num">Open</th><th className="num">Apply</th></tr></thead>
                 <tbody>
                   {charges.map(c => (
                     <tr key={c.periodMonth}>
                       <td>
-                        {c.label}
+                        {fmtDate(c.statementDate)}
                         {c.inProgress && <span className="muted" style={{ fontSize: 11 }}> &middot; in progress</span>}
                       </td>
-                      <td>{fmtDate(c.statementDate)}</td>
                       <td className="num">{money(c.charge)}</td>
                       <td className="num">{money(c.balance)}</td>
                       <td className="num">
@@ -147,8 +146,8 @@ export default function AddPaymentModal({
               </table>
             )}
             <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
-              A charge appears from the 1st of the month it covers; the &ldquo;in progress&rdquo;
-              figure can still move if a draw is added before the month ends.
+              Charges are listed by the statement they appear on. The &ldquo;in progress&rdquo;
+              one can still move if a draw is added before that month closes.
               <br />Applied: <b>{money(allocTotal)}</b>
               {Math.abs(unapplied) > 0.005 && (
                 <> &middot; {unapplied > 0
