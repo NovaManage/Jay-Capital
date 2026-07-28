@@ -5,6 +5,8 @@ import LiveRefresh from '@/components/LiveRefresh';
 import { fetchStatementExtras } from '@/lib/statement-data';
 
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+export const revalidate = 0;
 
 export default async function PortalPage() {
   const supabase = serverClient();

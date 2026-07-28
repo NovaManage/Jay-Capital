@@ -218,6 +218,26 @@ export async function addDraw(loanId: string, form: FormData) {
   });
 }
 
+export async function updateDraw(loanId: string, drawId: string, form: FormData) {
+  return run(async () => {
+    const supabase = await requireAdmin();
+    const drawDate = String(form.get('draw_date') || '');
+    const amount = Number(form.get('amount') || 0);
+    if (!drawDate) throw new Error('Draw date is required.');
+    if (!(amount > 0)) throw new Error('Draw amount must be greater than zero.');
+
+    const { error } = await supabase.from('draws').update({
+      draw_date: drawDate,
+      amount,
+      description: String(form.get('description') || 'Construction Draw').trim() || 'Construction Draw',
+    }).eq('id', drawId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/admin/loans/${loanId}`);
+    revalidatePath('/admin');
+    return { message: 'Draw updated.' };
+  });
+}
+
 export async function deleteDraw(loanId: string, drawId: string) {
   return run(async () => {
     const supabase = await requireAdmin();
@@ -417,6 +437,56 @@ export async function addPayment(loanId: string, opts: {
       message: left > 0.005
         ? `Payment recorded. ${left.toFixed(2)} is not yet applied to a charge.`
         : 'Payment recorded.',
+    };
+  });
+}
+
+/** Edit a payment and replace its allocations wholesale. */
+export async function updatePayment(loanId: string, paymentId: string, opts: {
+  paymentDate: string; amount: number; method?: string; note?: string;
+  allocations: { periodMonth: string; amount: number }[];
+}) {
+  return run(async () => {
+    await requireAdmin();
+    if (!opts.paymentDate) throw new Error('Payment date is required.');
+    const amount = Number(opts.amount);
+    if (!(amount > 0)) throw new Error('Payment amount must be greater than zero.');
+
+    const allocs = (opts.allocations || []).filter(a => Number(a.amount) > 0);
+    const allocTotal = allocs.reduce((s, a) => s + Number(a.amount), 0);
+    if (allocTotal - amount > 0.005) {
+      throw new Error('The amounts applied to charges add up to more than the payment.');
+    }
+
+    const svc = serviceClient();
+    const { error } = await svc.from('payments').update({
+      payment_date: opts.paymentDate,
+      amount,
+      method: (opts.method || '').trim() || null,
+      note: (opts.note || '').trim() || null,
+    }).eq('id', paymentId);
+    if (error) throw new Error(error.message);
+
+    const { error: dErr } = await svc.from('payment_allocations').delete().eq('payment_id', paymentId);
+    if (dErr) throw new Error(dErr.message);
+
+    if (allocs.length) {
+      const { error: aErr } = await svc.from('payment_allocations').insert(
+        allocs.map(a => ({
+          payment_id: paymentId, loan_id: loanId,
+          period_month: a.periodMonth, amount: Number(a.amount),
+        }))
+      );
+      if (aErr) throw new Error(aErr.message);
+    }
+
+    revalidatePath(`/admin/loans/${loanId}`);
+    revalidatePath('/admin');
+    const left = amount - allocTotal;
+    return {
+      message: left > 0.005
+        ? `Payment updated. ${left.toFixed(2)} is not yet applied to a charge.`
+        : 'Payment updated.',
     };
   });
 }

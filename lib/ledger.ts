@@ -44,11 +44,14 @@ export interface AllocationRow {
 }
 
 export interface PeriodCharge {
-  periodMonth: string;          // YYYY-MM-01
-  label: string;                // "July 2026"
+  periodMonth: string;          // YYYY-MM-01 of the period the interest covers
+  label: string;                // "July 2026" -- the period covered
+  statementDate: string;        // YYYY-MM-01 -- the statement this charge bills on
+  statementLabel: string;       // "August 2026" -- that statement's month
   charge: number;
   paid: number;
   balance: number;
+  inProgress: boolean;          // period hasn't ended yet, so the figure can still move
 }
 
 export interface Ledger {
@@ -146,7 +149,11 @@ export function buildLedger(
     .map(p => {
       const charge = chargeForPeriod(loan, draws, p);
       const paid = paidByPeriod.get(p) ?? 0;
-      return { periodMonth: p, label: monthName(p), charge, paid, balance: charge - paid };
+      return {
+        periodMonth: p, label: monthName(p),
+        statementDate: firstOfMonth(p, 1), statementLabel: monthName(firstOfMonth(p, 1)),
+        charge, paid, balance: charge - paid, inProgress: false,
+      };
     })
     .filter(r => r.balance > 0.005);
 
@@ -171,16 +178,22 @@ export function buildLedger(
 }
 
 /**
- * Outstanding balance per period as of today, for the "apply this payment to"
- * picker. Oldest first, already-settled months dropped.
+ * Outstanding balance per period, for the "apply this payment to" picker.
+ * Oldest first, settled months dropped.
+ *
+ * `throughPeriodMonth` defaults to the period now in progress, so from the 1st
+ * of a month that month's own charge is already on the list and a payment can
+ * be applied to it. An in-progress period is flagged, because a later draw can
+ * still move its figure.
  */
 export function openCharges(
   loan: Loan,
   draws: Draw[],
   payments: PaymentRow[],
   allocations: AllocationRow[],
-  throughPeriodMonth: string,
+  throughPeriodMonth: string = firstOfMonth(new Date()),
 ): PeriodCharge[] {
+  const currentPeriod = firstOfMonth(new Date());
   const paidByPeriod = new Map<string, number>();
   for (const a of allocations) {
     const key = firstOfMonth(a.period_month);
@@ -190,7 +203,11 @@ export function openCharges(
     .map(p => {
       const charge = chargeForPeriod(loan, draws, p);
       const paid = paidByPeriod.get(p) ?? 0;
-      return { periodMonth: p, label: monthName(p), charge, paid, balance: charge - paid };
+      return {
+        periodMonth: p, label: monthName(p),
+        statementDate: firstOfMonth(p, 1), statementLabel: monthName(firstOfMonth(p, 1)),
+        charge, paid, balance: charge - paid, inProgress: p >= currentPeriod,
+      };
     })
     .filter(r => r.charge > 0.005 && r.balance > 0.005);
 }

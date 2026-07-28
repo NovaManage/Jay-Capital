@@ -5,6 +5,8 @@ import { firstOfMonth } from '@/lib/format';
 import { fetchStatementExtras } from '@/lib/statement-data';
 
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+export const revalidate = 0;
 
 /**
  * Public statement PDF by unguessable token. Optional ?month=YYYY-MM-DD

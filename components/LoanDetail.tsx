@@ -195,8 +195,19 @@ export default function LoanDetail({
                     <td>{p.note || ''}</td>
                     <td>{mine.length ? mine.map(a => `${monthName(a.period_month)} ${money(a.amount)}`).join(', ') : <span className="muted">unapplied</span>}</td>
                     <td className="num">{money(p.amount)}</td>
-                    {canEdit && <td className="num"><button className="btn danger" disabled={busy}
-                      onClick={() => setConfirmDeletePayment(p.id)}>Delete</button></td>}
+                    {canEdit && (
+                      <td className="num">
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                          <AddPaymentModal
+                            key={`edit-${p.id}`}
+                            loanId={summary.loan_id} loan={engineLoan} draws={engineDraws}
+                            payments={payments} allocations={allocations} editing={p}
+                          />
+                          <button className="btn danger" disabled={busy}
+                            onClick={() => setConfirmDeletePayment(p.id)}>Delete</button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -230,8 +241,15 @@ export default function LoanDetail({
                   <td>{d.description}</td>
                   <td className="num">{money(d.amount)}</td>
                   <td className="num">{money(drawInterest(Number(d.amount), rate, d.draw_date))}</td>
-                  {canEdit && <td className="num"><button className="btn danger" disabled={busy}
-                    onClick={() => setConfirmDeleteDraw(d.id)}>Delete</button></td>}
+                  {canEdit && (
+                    <td className="num">
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                        <AddDrawModal loanId={summary.loan_id} editing={d} />
+                        <button className="btn danger" disabled={busy}
+                          onClick={() => setConfirmDeleteDraw(d.id)}>Delete</button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
               {construction.length === 0 && <tr><td colSpan={canEdit ? 5 : 4} className="muted" style={{ textAlign: 'center' }}>No draws yet.</td></tr>}
