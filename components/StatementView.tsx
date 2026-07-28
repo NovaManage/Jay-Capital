@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { money, pct, fmtDate, firstOfMonth, monthName, clampMonth, statementMonths } from '@/lib/format';
+import { money, pct, fmtDate, firstOfMonth, monthName, clampMonth, statementMonths, statementPeriod } from '@/lib/format';
 import { drawInterest, buildStatement, type Draw as EngineDraw } from '@/lib/interest';
 import { buildLedger, type PaymentRow, type AllocationRow } from '@/lib/ledger';
 
@@ -37,6 +37,8 @@ export default function StatementView({
 
   const stmt = buildStatement(engineLoan, engineDraws, asOf);
   const ledger = buildLedger(engineLoan, engineDraws, payments, allocations, asOf);
+  const period = statementPeriod(asOf);
+  const shortPeriod = stmt.periodEnd.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   const pdfHref = `/api/statement-pdf/${loan.access_token}?month=${asOf}`;
 
   const go = (delta: number) => setAsOf(cur => clampMonth(firstOfMonth(cur, delta), loan.closing_date));
@@ -70,20 +72,23 @@ export default function StatementView({
           <div style={{ textAlign: 'right' }}>
             <div className="muted">Statement Date</div>
             <div style={{ fontWeight: 700, color: 'var(--navy)' }}>{fmtDate(asOf)}</div>
+            <div className="muted" style={{ marginTop: 6 }}>Period: {period.label}</div>
           </div>
         </div>
 
+        {/* left column: the loan.  right column: this statement's numbers. */}
         <div className="summary">
           <div className="row"><span className="k">Loan Amount</span><span className="v">{money(loan.loan_amount)}</span></div>
           <div className="row"><span className="k">Total Disbursed</span><span className="v">{money(stmt.totalDisbursed)}</span></div>
           <div className="row"><span className="k">Acquisition</span><span className="v">{money(loan.acquisition)}</span></div>
           <div className="row"><span className="k">Remaining Draw Balance</span><span className="v">{money(stmt.remainingDraw)}</span></div>
           <div className="row"><span className="k">Construction Budget</span><span className="v">{money(loan.construction)}</span></div>
-          <div className="row"><span className="k">Total Draws</span><span className="v">{money(stmt.periodDrawTotal)}</span></div>
+          <div className="row"><span className="k">Total Draws {shortPeriod}</span><span className="v">{money(stmt.periodDrawTotal)}</span></div>
           <div className="row"><span className="k">Interest Rate</span><span className="v">{pct(loan.annual_rate)}</span></div>
+          <div className="row"><span className="k">Base Balance Interest</span><span className="v">{money(stmt.baseInterest)}</span></div>
           <div className="row"><span className="k">Closing Date</span><span className="v">{fmtDate(loan.closing_date)}</span></div>
+          <div className="row"><span className="k">Interest Accrued {shortPeriod}</span><span className="v">{money(stmt.periodDrawInterest)}</span></div>
           <div className="row"><span className="k">Servicer</span><span className="v">{SERVICER}</span></div>
-          <div className="row"><span className="k">Interest Accrued</span><span className="v">{money(stmt.periodDrawInterest)}</span></div>
         </div>
 
         {/* Running balance */}
@@ -91,6 +96,7 @@ export default function StatementView({
         <div className="summary" style={{ gridTemplateColumns: '1fr', maxWidth: 460 }}>
           <div className="row"><span className="k">Previous Balance</span><span className="v">{money(ledger.previousBalance)}</span></div>
           <div className="row"><span className="k">Payments Received</span><span className="v">{ledger.paymentsThisPeriod > 0 ? `(${money(ledger.paymentsThisPeriod)})` : money(0)}</span></div>
+          <div className="row"><span className="k">Previous Open Balance</span><span className="v">{money(ledger.previousOpenBalance)}</span></div>
           <div className="row"><span className="k">Current Charges</span><span className="v">{money(ledger.currentCharge)}</span></div>
           <div className="row due"><span className="k">Amount Due</span><span className="v">{money(ledger.amountDue)}</span></div>
         </div>
@@ -114,7 +120,7 @@ export default function StatementView({
           </>
         )}
 
-        <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '28px 0 8px' }}>Construction Draws</div>
+        <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '28px 0 8px' }}>Construction Draws ({stmt.periodLabel})</div>
         {stmt.periodDraws.length > 0 ? (
           <table className="bordered">
             <thead><tr><th>Date</th><th>Description</th><th className="num">Amount</th><th className="num">Interest Accrued</th></tr></thead>
@@ -134,7 +140,7 @@ export default function StatementView({
               </tr>
             </tbody>
           </table>
-        ) : <p className="muted">No draws on this statement.</p>}
+        ) : <p className="muted">No draws during this period.</p>}
 
         {ledger.priorUnpaid.length > 0 && (
           <>

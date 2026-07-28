@@ -60,6 +60,10 @@ export interface Ledger {
   currentCharge: number;
   previousBalance: number;
   paymentsThisPeriod: number;
+  /** previousBalance - paymentsThisPeriod: what was still open before this
+   *  statement's own charges. Shown so the arithmetic reads straight down
+   *  rather than making the borrower do the subtraction. */
+  previousOpenBalance: number;
   amountDue: number;
   priorUnpaid: PeriodCharge[];
   paymentsInPeriod: PaymentRow[];
@@ -130,7 +134,8 @@ export function buildLedger(
     .sort((a, b) => a.payment_date.localeCompare(b.payment_date));
   const paymentsThisPeriod = paymentsInPeriod.reduce((s, p) => s + Number(p.amount), 0);
 
-  const amountDue = previousBalance - paymentsThisPeriod + currentCharge;
+  const previousOpenBalance = previousBalance - paymentsThisPeriod;
+  const amountDue = previousOpenBalance + currentCharge;
 
   // ---- allocation-based aging of earlier months
   const payById = new Map(payments.map(p => [p.id, p]));
@@ -170,6 +175,7 @@ export function buildLedger(
     currentCharge,
     previousBalance,
     paymentsThisPeriod,
+    previousOpenBalance,
     amountDue,
     priorUnpaid,
     paymentsInPeriod,
