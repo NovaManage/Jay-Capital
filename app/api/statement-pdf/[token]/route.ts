@@ -1,0 +1,30 @@
+import { type NextRequest } from 'next/server';
+import { serviceClient } from '@/lib/supabase-server';
+import { statementPDF } from '@/lib/statement-pdf';
+import { firstOfMonth } from '@/lib/format';
+
+export const dynamic = 'force-dynamic';
+
+/**
+ * Public statement PDF by unguessable token. Optional ?month=YYYY-MM-DD
+ * (snapped to first of month). Resolves only the single loan for the token.
+ */
+export async function GET(req: NextRequest, { params }: { params: { token: string } }) {
+  const supabase = serviceClient();
+  const { data: loan } = await supabase.from('loan_summary').select('*').eq('access_token', params.token).maybeSingle();
+  if (!loan) return new Response('Not found', { status: 404 });
+
+  const { data: draws } = await supabase.from('draw_details').select('*').eq('loan_id', loan.loan_id).order('draw_date', { ascending: true });
+
+  const monthParam = new URL(req.url).searchParams.get('month');
+  const statementDate = monthParam ? firstOfMonth(monthParam) : firstOfMonth(new Date());
+
+  const pdf = await statementPDF(loan, draws ?? [], statementDate);
+  const safeName = `Statement_${loan.borrower_name.replace(/[^a-z0-9]+/gi, '_')}_${statementDate}.pdf`;
+  return new Response(Buffer.from(pdf), {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${safeName}"`,
+    },
+  });
+}
