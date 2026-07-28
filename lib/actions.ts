@@ -43,6 +43,44 @@ async function upsertBorrower(supabase: any, name: string, email: string, phone:
   return nb.id;
 }
 
+/**
+ * Look up an auth user by email. The admin API has no direct
+ * get-by-email, so page through listUsers and match case-insensitively.
+ */
+async function findUserByEmail(svc: any, email: string): Promise<{ id: string } | null> {
+  const target = email.trim().toLowerCase();
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await svc.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw new Error(error.message);
+    const users = data?.users ?? [];
+    const hit = users.find((u: any) => String(u.email ?? '').toLowerCase() === target);
+    if (hit) return { id: hit.id };
+    if (users.length < 200) break;
+  }
+  return null;
+}
+
+/**
+ * Point every borrower record for this email at the same login, so one
+ * borrower with several loans sees all of them in their portal.
+ * RLS reads `borrower_id in (select id from borrowers where user_id = auth.uid())`,
+ * which is already plural-safe -- it just needs the rows linked.
+ * Returns how many records were linked.
+ */
+async function linkBorrowerRecords(
+  svc: any, userId: string, email: string, borrowerId: string,
+): Promise<number> {
+  await svc.from('borrowers').update({ user_id: userId, email }).eq('id', borrowerId);
+
+  // Any other borrower record with the same email that has no login yet.
+  const { data: siblings } = await svc.from('borrowers')
+    .select('id').ilike('email', email).is('user_id', null);
+  const ids = (siblings ?? []).map((r: any) => r.id).filter((id: string) => id !== borrowerId);
+  if (ids.length) await svc.from('borrowers').update({ user_id: userId }).in('id', ids);
+
+  return 1 + ids.length;
+}
+
 async function upsertLender(supabase: any, name: string): Promise<string | null> {
   if (!name) return null;
   const { data: existing } = await supabase.from('lenders').select('id').eq('name', name).maybeSingle();
@@ -285,8 +323,18 @@ export async function createBorrowerUser(opts: {
     const site = process.env.NEXT_PUBLIC_SITE_URL || '';
     let userId: string | undefined;
     let message = '';
+    let reusedExisting = false;
 
-    if (opts.mode === 'invite') {
+    // If this email already has a login, don't fail -- attach this loan's
+    // borrower record to the account they already have. That's the common
+    // case for a borrower taking out a second loan.
+    const existing = await findUserByEmail(svc, opts.email);
+
+    if (existing) {
+      userId = existing.id;
+      reusedExisting = true;
+      message = `${opts.email} already had an account, so this loan was connected to it.`;
+    } else if (opts.mode === 'invite') {
       const { data, error } = await svc.auth.admin.inviteUserByEmail(opts.email, {
         redirectTo: site ? `${site}/auth/callback?next=/portal` : undefined,
         data: { full_name: opts.fullName },
@@ -308,16 +356,82 @@ export async function createBorrowerUser(opts: {
       }
     }
 
-    if (userId) {
-      await svc.from('profiles').upsert({
-        id: userId, email: opts.email, full_name: opts.fullName || null, role: 'borrower',
-      }, { onConflict: 'id' });
-      // Link borrower record -> auth user (RLS: borrower sees only their loans).
-      await svc.from('borrowers').update({ user_id: userId, email: opts.email }).eq('id', opts.borrowerId);
+    if (!userId) throw new Error('Could not create or find the login for that email.');
+
+    // Never demote an existing admin/staff account to borrower.
+    const { data: currentProfile } = await svc.from('profiles').select('role').eq('id', userId).maybeSingle();
+    const keepRole = currentProfile?.role === 'admin' || currentProfile?.role === 'staff';
+    await svc.from('profiles').upsert({
+      id: userId,
+      email: opts.email,
+      full_name: opts.fullName || null,
+      role: keepRole ? currentProfile!.role : 'borrower',
+    }, { onConflict: 'id' });
+
+    const linked = await linkBorrowerRecords(svc, userId, opts.email, opts.borrowerId);
+    if (linked > 1) {
+      message += ` ${linked} loans are now connected to this login.`;
     }
+    if (reusedExisting) {
+      message += ' They should sign in with their existing password.';
+    }
+
     revalidatePath(`/admin/loans/${opts.loanId}`);
     revalidatePath('/admin/users');
-    return { ok: true, message };
+    return { message, linked };
+  });
+}
+
+/**
+ * Borrower self-setup from a statement link.
+ *
+ * The statement token already grants full sight of this loan, so anyone
+ * holding the link can start this. The safety property is that the address
+ * is taken from the loan record, NOT from the form -- a link-holder cannot
+ * bind the loan to an email of their choosing.
+ */
+export async function claimPortalAccount(token: string, password: string) {
+  return run(async () => {
+    if (!password || password.length < 6) {
+      throw new Error('Please choose a password of at least 6 characters.');
+    }
+
+    const svc = serviceClient();
+    const { data: loan } = await svc.from('loan_summary')
+      .select('loan_id, borrower_id, borrower_name, borrower_email')
+      .eq('access_token', token).maybeSingle();
+    if (!loan) throw new Error('This statement link is no longer valid. Please contact Jay Capital.');
+
+    const email = String(loan.borrower_email ?? '').trim();
+    if (!email) {
+      throw new Error('There is no email address on file for this loan yet, so an account cannot be set up here. Please contact Jay Capital.');
+    }
+
+    if (await findUserByEmail(svc, email)) {
+      throw new Error(`An account already exists for ${email}. Please sign in instead -- you can use the "Email link" option on the sign-in page if you have forgotten your password.`);
+    }
+
+    const { data, error } = await svc.auth.admin.createUser({
+      email, password, email_confirm: true,
+      user_metadata: { full_name: loan.borrower_name },
+    });
+    if (error) throw new Error(error.message);
+    const userId = data?.user?.id;
+    if (!userId) throw new Error('The account could not be created. Please contact Jay Capital.');
+
+    await svc.from('profiles').upsert({
+      id: userId, email, full_name: loan.borrower_name ?? null, role: 'borrower',
+    }, { onConflict: 'id' });
+
+    const linked = await linkBorrowerRecords(svc, userId, email, loan.borrower_id);
+
+    return {
+      email,
+      linked,
+      message: linked > 1
+        ? `Your account is ready, with ${linked} loans connected. Sign in with ${email} and the password you just chose.`
+        : `Your account is ready. Sign in with ${email} and the password you just chose.`,
+    };
   });
 }
 

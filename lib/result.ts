@@ -16,6 +16,10 @@ export interface ActionResult<T = unknown> {
   /** emailStatement: how many statements went out, and to whom. */
   count?: number;
   to?: string;
+  /** account setup: the address the login was created for. */
+  email?: string;
+  /** account setup: how many borrower records were linked to the login. */
+  linked?: number;
 }
 
 /** Turn a caught error into something a non-technical user can act on. */
