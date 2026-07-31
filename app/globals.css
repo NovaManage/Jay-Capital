@@ -10,13 +10,21 @@
   --pale:      #EEF2F9;
   --danger:    #B3261E;
   --ok:        #1B7F4F;
+
+  /* brass: the warm counterweight to the navy. Used sparingly -- keystone,
+     rules, and the eyebrow labels on the marketing page. */
+  --brass:     #B08A4A;
+  --brass-lt:  #E4C07A;
+
+  --display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --body: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  font-family: var(--body);
   font-size: 14px;
   line-height: 1.45;
 }
@@ -114,4 +122,130 @@ select.filter, input.field, select.field, textarea.field {
 @media (max-width: 640px) {
   .summary { grid-template-columns: 1fr; }
   .contact { flex-direction: column; }
+}
+
+
+/* ============================================================
+   Marketing site (.lp-*). Kept in its own namespace so it can't
+   collide with the portal's utility classes.
+   ============================================================ */
+.lp { font-family: var(--body); color: var(--ink); }
+.lp-shell { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+
+.lp-eyebrow {
+  font-size: 11px; font-weight: 900; letter-spacing: .22em;
+  text-transform: uppercase; color: var(--brass);
+}
+.lp h1, .lp h2, .lp h3 { font-family: var(--display); font-weight: 600; color: var(--navy); margin: 0; }
+.lp h1 { font-size: clamp(38px, 5.4vw, 64px); line-height: 1.04; letter-spacing: -.02em; }
+.lp h2 { font-size: clamp(26px, 3.2vw, 38px); line-height: 1.12; letter-spacing: -.015em; }
+.lp h3 { font-size: 20px; line-height: 1.25; }
+.lp p { line-height: 1.65; }
+
+/* header */
+.lp-nav {
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(247, 249, 252, .88); backdrop-filter: blur(10px);
+  border-bottom: 1px solid #E4EAF3;
+}
+.lp-nav-in { display: flex; align-items: center; gap: 28px; padding: 16px 0; }
+.lp-nav-links { display: flex; align-items: center; gap: 26px; margin-left: auto; flex-wrap: wrap; }
+/* :not(.lp-btn) so the underline treatment never fights the button's own
+   border -- .lp-nav-links a would otherwise out-specify .lp-btn. */
+.lp-nav-links a:not(.lp-btn) {
+  color: var(--navy-med); text-decoration: none; font-weight: 700; font-size: 14px;
+  padding-bottom: 2px; border-bottom: 2px solid transparent;
+}
+.lp-nav-links a:not(.lp-btn):hover { color: var(--navy); border-bottom-color: var(--brass); }
+.lp-btn {
+  display: inline-block; background: var(--navy); color: #fff !important;
+  padding: 11px 20px; border-radius: 999px; text-decoration: none;
+  font-weight: 700; font-size: 14px; border: 1px solid var(--navy);
+  transition: background .16s ease, transform .16s ease;
+}
+.lp-btn:hover { background: var(--navy-med); border-color: var(--navy-med); transform: translateY(-1px); }
+.lp-btn.ghost { background: transparent; color: var(--navy) !important; border-color: var(--border); }
+.lp-btn.ghost:hover { background: var(--pale); }
+.lp-btn.brass { background: var(--brass); border-color: var(--brass); }
+.lp-btn.brass:hover { background: #9C7838; border-color: #9C7838; }
+
+/* hero */
+.lp-hero { padding: 78px 0 88px; }
+.lp-hero-grid { display: grid; grid-template-columns: 1.08fr .92fr; gap: 64px; align-items: center; }
+.lp-lede { font-size: 18px; color: #4A5568; max-width: 46ch; margin: 22px 0 30px; }
+.lp-cta-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.lp-rule { height: 2px; width: 64px; background: var(--brass); margin: 0 0 22px; border-radius: 2px; }
+
+/* the term sheet -- deliberately the same card language as the statement */
+.lp-sheet {
+  background: #fff; border: 1px solid #E4EAF3; border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(31, 56, 100, .13); overflow: hidden;
+}
+.lp-sheet-head {
+  background: var(--navy); color: #fff; padding: 14px 20px;
+  font-size: 11px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.lp-sheet-body { padding: 8px 20px 20px; }
+.lp-sheet-row {
+  display: flex; justify-content: space-between; gap: 20px;
+  padding: 11px 0; border-bottom: 1px solid var(--navy-soft); font-size: 14px;
+}
+.lp-sheet-row:last-child { border-bottom: none; }
+.lp-sheet-row .k { font-weight: 700; color: var(--navy); }
+.lp-sheet-row .v { font-variant-numeric: tabular-nums; }
+.lp-sheet-note { margin: 14px 20px 20px; padding: 12px 14px; background: var(--pale); border-radius: 8px; font-size: 12.5px; color: var(--muted); }
+
+/* sections */
+.lp-section { padding: 84px 0; }
+.lp-section.alt { background: #fff; border-top: 1px solid #E9EEF6; border-bottom: 1px solid #E9EEF6; }
+.lp-head { max-width: 62ch; margin-bottom: 44px; }
+.lp-head p { color: #4A5568; font-size: 17px; margin: 14px 0 0; }
+
+.lp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(248px, 1fr)); gap: 22px; }
+.lp-card {
+  background: #fff; border: 1px solid #E4EAF3; border-radius: 12px; padding: 26px 24px 28px;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.lp-section.alt .lp-card { background: var(--bg); }
+.lp-card:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(31, 56, 100, .1); border-color: var(--navy-soft); }
+.lp-card h3 { margin-bottom: 10px; }
+.lp-card p { font-size: 14.5px; color: #4A5568; margin: 0; }
+.lp-card .lp-tag { display: block; font-size: 11px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; color: var(--brass); margin-bottom: 14px; }
+
+/* the three steps -- a real sequence, so the numbers carry meaning */
+.lp-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 34px; }
+.lp-step-n {
+  font-family: var(--display); font-size: 40px; font-weight: 600; color: var(--navy-soft);
+  line-height: 1; margin-bottom: 12px;
+}
+.lp-step h3 { margin-bottom: 8px; }
+.lp-step p { font-size: 14.5px; color: #4A5568; margin: 0; }
+
+/* contact */
+.lp-contact { background: var(--navy); color: #fff; padding: 76px 0; }
+.lp-contact h2 { color: #fff; }
+.lp-contact p { color: rgba(255,255,255,.8); font-size: 17px; max-width: 52ch; }
+.lp-contact-row { display: flex; gap: 40px; flex-wrap: wrap; margin-top: 32px; align-items: center; }
+.lp-contact-item { display: flex; flex-direction: column; gap: 4px; }
+.lp-contact-item .lbl { font-size: 11px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; color: var(--brass-lt); }
+.lp-contact-item a { color: #fff; text-decoration: none; font-size: 21px; font-family: var(--display); font-weight: 600; }
+.lp-contact-item a:hover { text-decoration: underline; text-decoration-color: var(--brass-lt); }
+
+/* footer */
+.lp-foot { background: #16294A; color: rgba(255,255,255,.62); padding: 42px 0; font-size: 13px; }
+.lp-foot-row { display: flex; justify-content: space-between; gap: 26px; flex-wrap: wrap; align-items: center; }
+.lp-foot a { color: rgba(255,255,255,.86); text-decoration: none; }
+.lp-foot a:hover { text-decoration: underline; }
+
+@media (max-width: 900px) {
+  .lp-hero-grid { grid-template-columns: 1fr; gap: 44px; }
+  .lp-hero { padding: 52px 0 60px; }
+  .lp-section { padding: 60px 0; }
+  .lp-nav-links { gap: 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-card, .lp-btn { transition: none; }
+  .lp-card:hover, .lp-btn:hover { transform: none; }
 }

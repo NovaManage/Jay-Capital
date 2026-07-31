@@ -1,5 +1,6 @@
 'use client';
 
+import Logo from '@/components/Logo';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { browserClient } from '@/lib/supabase-browser';
@@ -71,7 +72,7 @@ function CallbackInner() {
   return (
     <div className="auth-shell">
       <div className="auth-card card">
-        <h1 className="title">Jay Capital</h1>
+        <div style={{ display: 'flex', justifyContent: 'center' }}><Logo size={46} /></div>
         <div className="rule" />
         {error ? (
           <>
@@ -90,7 +91,7 @@ function CallbackInner() {
 
 export default function AuthCallbackPage() {
   return (
-    <Suspense fallback={<div className="auth-shell"><div className="auth-card card"><h1 className="title">Jay Capital</h1></div></div>}>
+    <Suspense fallback={<div className="auth-shell"><div className="auth-card card"><div style={{ display: 'flex', justifyContent: 'center' }}><Logo size={46} /></div></div></div>}>
       <CallbackInner />
     </Suspense>
   );

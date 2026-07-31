@@ -2,7 +2,9 @@ import { serverClient } from '@/lib/supabase-server';
 import StatementView from '@/components/StatementView';
 import PortalTitle from '@/components/PortalTitle';
 import LiveRefresh from '@/components/LiveRefresh';
+import Logo from '@/components/Logo';
 import { fetchStatementExtras } from '@/lib/statement-data';
+import { borrowerDisplayName } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -13,11 +15,11 @@ export default async function PortalPage() {
   const { data: { user } } = await supabase.auth.getUser();
   const { data: loans } = await supabase.from('loan_summary').select('*').order('loan_number');
 
-  const borrowerName = loans && loans.length ? loans[0].borrower_name : '';
+  const borrowerName = loans && loans.length ? borrowerDisplayName(loans[0]) : '';
 
   const Nav = (
     <nav className="nav">
-      <span className="brand">JAY CAPITAL</span><span className="spacer" />
+      <Logo size={34} /><span className="spacer" />
       <span className="muted" style={{ fontSize: 13 }}>{user?.email}</span>
       <form action="/auth/signout" method="post" style={{ margin: 0 }}>
         <button className="btn secondary">Sign out</button>

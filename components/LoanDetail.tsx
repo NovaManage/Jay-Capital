@@ -18,6 +18,7 @@ interface Summary {
   loan_id: string; loan_number: string; property: string; loan_amount: number;
   acquisition: number; construction: number; annual_rate: number; closing_date: string;
   status: string; access_token: string; borrower_id: string; borrower_name: string;
+  is_entity?: boolean | null; entity_name?: string | null;
   borrower_email: string | null; borrower_phone: string | null; lender_name: string | null;
   total_disbursed: number; remaining_draw: number; accrued_interest: number;
 }
@@ -33,7 +34,7 @@ export default function LoanDetail({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const rate = Number(summary.annual_rate);
-  const [stmtDate, setStmtDate] = useState(() => clampMonth(firstOfMonth(new Date()), summary.closing_date));
+  const [stmtDate, setStmtDate] = useState(() => clampMonth(firstOfMonth(new Date(), 1), summary.closing_date));
   const months = statementMonths(summary.closing_date);
 
   const [confirmDeleteLoan, setConfirmDeleteLoan] = useState(false);
@@ -80,7 +81,15 @@ export default function LoanDetail({
       <div className="card" style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 style={{ color: 'var(--navy)', margin: '0 0 4px' }}>{summary.borrower_name}</h1>
+            <h1 style={{ color: 'var(--navy)', margin: '0 0 4px' }}>
+              {summary.is_entity && summary.entity_name ? summary.entity_name : summary.borrower_name}
+            </h1>
+            {summary.is_entity && summary.entity_name && (
+              <div className="muted" style={{ marginBottom: 2 }}>
+                Personal name: <b>{summary.borrower_name}</b>
+                <span style={{ marginLeft: 8 }} className="badge staff">entity</span>
+              </div>
+            )}
             <div className="muted">{summary.loan_number} &middot; {summary.property}</div>
             {summary.borrower_email && <div className="muted">{summary.borrower_email}</div>}
             {summary.borrower_phone && <div className="muted">{summary.borrower_phone}</div>}

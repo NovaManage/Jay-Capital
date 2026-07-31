@@ -1,5 +1,6 @@
 'use client';
 
+import Logo from '@/components/Logo';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { browserClient } from '@/lib/supabase-browser';
@@ -52,7 +53,8 @@ export default function SetPasswordPage() {
   return (
     <div className="auth-shell">
       <div className="auth-card card">
-        <h1 className="title">Set Your Password</h1>
+        <div style={{ display: 'flex', justifyContent: 'center' }}><Logo size={46} /></div>
+        <h1 className="title" style={{ fontSize: 18, marginTop: 14 }}>Set Your Password</h1>
         <div className="rule" />
 
         {checking ? (

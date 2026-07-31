@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { buildStatement, drawInterest, type Draw as EngineDraw } from '@/lib/interest';
-import { money, pct, fmtDate, statementPeriod } from '@/lib/format';
+import { money, pct, fmtDate, statementPeriod, borrowerDisplayName } from '@/lib/format';
 import { buildLedger, type PaymentRow, type AllocationRow } from '@/lib/ledger';
 import type { StatementLoan, StatementDraw } from '@/lib/statement-html';
 
@@ -66,7 +66,7 @@ export async function statementPDF(
 
   // ---- Borrower (full address, wrapped) on the left, date + period on the right
   const topY = y;
-  text(loan.borrower_name, M, y, 13, bold, NAVY); y -= 15;
+  text(borrowerDisplayName(loan as any), M, y, 13, bold, NAVY); y -= 15;
   const words = (loan.property || '').split(' ');
   let line = '';
   for (const w of words) {

@@ -1,5 +1,6 @@
 'use client';
 
+import Logo from '@/components/Logo';
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { browserClient } from '@/lib/supabase-browser';
@@ -43,7 +44,7 @@ function LoginForm() {
   return (
     <div className="auth-shell">
       <div className="auth-card card">
-        <h1 className="title">Jay Capital</h1>
+        <div style={{ display: 'flex', justifyContent: 'center' }}><Logo size={46} /></div>
         <div className="rule" />
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
@@ -106,7 +107,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="auth-shell"><div className="auth-card card"><h1 className="title">Jay Capital</h1></div></div>}>
+    <Suspense fallback={<div className="auth-shell"><div className="auth-card card"><div style={{ display: 'flex', justifyContent: 'center' }}><Logo size={46} /></div></div></div>}>
       <LoginForm />
     </Suspense>
   );

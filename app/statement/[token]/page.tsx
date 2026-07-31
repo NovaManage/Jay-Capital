@@ -4,6 +4,7 @@ import PortalTitle from '@/components/PortalTitle';
 import ClaimAccountCard from '@/components/ClaimAccountCard';
 import LiveRefresh from '@/components/LiveRefresh';
 import { fetchStatementExtras } from '@/lib/statement-data';
+import { borrowerDisplayName } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -26,7 +27,7 @@ export default async function StatementPage({ params }: { params: { token: strin
 
   return (
     <>
-      <PortalTitle name={loan.borrower_name} />
+      <PortalTitle name={borrowerDisplayName(loan)} />
       <LiveRefresh />
       {canClaim && <ClaimAccountCard token={params.token} email={loan.borrower_email} />}
       <StatementView

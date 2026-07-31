@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { updateLoan } from '@/lib/actions';
 import { rateFraction } from '@/lib/format';
 import LenderSelect, { type LenderOption } from '@/components/LenderSelect';
+import EntityFields from '@/components/EntityFields';
 import { formatPhone, formatAddress } from '@/lib/formatting';
 
 interface Loan {
@@ -14,6 +15,8 @@ interface Loan {
   borrower_name: string; borrower_email: string | null; borrower_phone: string | null;
   lender_name: string | null;
   lender_id?: string | null;
+  is_entity?: boolean | null;
+  entity_name?: string | null;
 }
 
 export default function EditLoanForm({ loan, lenders }: { loan: Loan; lenders: LenderOption[] }) {
@@ -50,6 +53,7 @@ export default function EditLoanForm({ loan, lenders }: { loan: Loan; lenders: L
             <div className="field-wrap"><label>Borrower Email *</label><input className="field" type="email" name="borrower_email" defaultValue={loan.borrower_email ?? ''} required /></div>
             <div className="field-wrap"><label>Borrower Phone</label><input className="field" name="borrower_phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(formatPhone(e.target.value))} placeholder="(555) 123-4567" /></div>
             <div className="field-wrap" style={{ gridColumn: '1 / -1' }}><label>Property Address (full)</label><input className="field" name="property" required value={property} onChange={e => setProperty(e.target.value)} onBlur={e => setProperty(formatAddress(e.target.value))} /></div>
+            <EntityFields defaultIsEntity={!!loan.is_entity} defaultEntityName={loan.entity_name ?? ''} />
             <LenderSelect lenders={lenders} currentId={loan.lender_id ?? null} currentName={loan.lender_name} />
             <div className="field-wrap"><label>Loan Amount *</label><input className="field" type="number" step="0.01" name="loan_amount" value={loanAmount} onChange={e => setLoanAmount(Number(e.target.value))} required /></div>
             <div className="field-wrap"><label>Acquisition *</label><input className="field" type="number" step="0.01" name="acquisition" value={acquisition} onChange={e => setAcquisition(Number(e.target.value))} required /></div>

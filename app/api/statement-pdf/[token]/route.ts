@@ -20,11 +20,12 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
   const { data: draws } = await supabase.from('draw_details').select('*').eq('loan_id', loan.loan_id).order('draw_date', { ascending: true });
 
   const monthParam = new URL(req.url).searchParams.get('month');
-  const statementDate = monthParam ? firstOfMonth(monthParam) : firstOfMonth(new Date());
+  const statementDate = monthParam ? firstOfMonth(monthParam) : firstOfMonth(new Date(), 1);
 
   const extras = await fetchStatementExtras(loan.loan_id);
   const pdf = await statementPDF(loan, draws ?? [], statementDate, extras);
-  const safeName = `Statement_${loan.borrower_name.replace(/[^a-z0-9]+/gi, '_')}_${statementDate}.pdf`;
+  const displayName = loan.is_entity && loan.entity_name ? loan.entity_name : loan.borrower_name;
+  const safeName = `Statement_${displayName.replace(/[^a-z0-9]+/gi, '_')}_${statementDate}.pdf`;
   return new Response(Buffer.from(pdf), {
     headers: {
       'Content-Type': 'application/pdf',

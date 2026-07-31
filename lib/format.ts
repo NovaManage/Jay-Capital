@@ -123,3 +123,15 @@ export function statementPeriod(statementDate: string): { start: string; end: st
   const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   return { start: iso(periodStart), end: iso(periodEnd), label: `${fmtDate(iso(periodStart))} - ${fmtDate(iso(periodEnd))}` };
 }
+
+/**
+ * Who the loan is presented as on borrower-facing screens.
+ * Entity loans show the entity; everything else shows the person.
+ * The admin dashboard deliberately does NOT use this -- it always lists the
+ * personal name so a portfolio stays searchable by who is behind it.
+ */
+export function borrowerDisplayName(loan: {
+  is_entity?: boolean | null; entity_name?: string | null; borrower_name: string;
+}): string {
+  return loan.is_entity && loan.entity_name ? loan.entity_name : loan.borrower_name;
+}

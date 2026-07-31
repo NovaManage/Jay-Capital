@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { serverClient } from '@/lib/supabase-server';
 import LiveRefresh from '@/components/LiveRefresh';
+import Logo from '@/components/Logo';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <>
       <LiveRefresh />
       <nav className="nav">
-        <span className="brand">JAY CAPITAL</span>
+        <Link href="/admin" style={{ textDecoration: 'none', padding: 0 }}><Logo size={34} /></Link>
         <Link href="/admin">Portfolio</Link>
         {isAdmin && <Link href="/admin/loans/new">New Loan</Link>}
         {isAdmin && <Link href="/admin/import">Import</Link>}

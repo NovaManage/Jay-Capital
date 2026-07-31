@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { money, pct, fmtDate, firstOfMonth, monthName, clampMonth, statementMonths, statementPeriod } from '@/lib/format';
+import { money, pct, fmtDate, firstOfMonth, monthName, clampMonth, statementMonths, statementPeriod, borrowerDisplayName } from '@/lib/format';
 import { drawInterest, buildStatement, type Draw as EngineDraw } from '@/lib/interest';
 import { buildLedger, type PaymentRow, type AllocationRow } from '@/lib/ledger';
 
@@ -14,6 +14,7 @@ export interface StatementData {
   borrower_name: string; borrower_email: string | null; borrower_phone: string | null;
   lender_name: string | null; total_disbursed: number; remaining_draw: number;
   accrued_interest: number; access_token: string;
+  is_entity?: boolean | null; entity_name?: string | null;
 }
 export interface StatementDraw { draw_date: string; description: string; amount: number; interest_accrued: number | null; }
 export interface PayInfo { method: string | null; instructions: string | null }
@@ -26,7 +27,9 @@ export default function StatementView({
   payInfo?: PayInfo | null; allowNavigate?: boolean;
 }) {
   const months = statementMonths(loan.closing_date);
-  const [asOf, setAsOf] = useState(() => clampMonth(firstOfMonth(new Date()), loan.closing_date));
+  // Default to the statement for the month now in progress: this month's bill
+  // went out on the 1st, so what's useful to see is what lands next.
+  const [asOf, setAsOf] = useState(() => clampMonth(firstOfMonth(new Date(), 1), loan.closing_date));
 
   const rate = Number(loan.annual_rate);
   const engineLoan = {
@@ -64,7 +67,7 @@ export default function StatementView({
 
         <div className="contact">
           <div>
-            <div className="name">{loan.borrower_name}</div>
+            <div className="name">{borrowerDisplayName(loan)}</div>
             <div className="muted">{loan.property}</div>
             {loan.borrower_phone && <div className="muted">{loan.borrower_phone}</div>}
             {loan.borrower_email && <div className="muted">{loan.borrower_email}</div>}

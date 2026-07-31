@@ -114,6 +114,9 @@ function requireLoanFields(form: FormData, lenderId: string | null) {
   ];
   const missing = need.filter(([k]) => !String(form.get(k) || '').trim()).map(([, label]) => label);
   if (!lenderId) missing.push('Lender');
+  if (String(form.get('is_entity') || '') === 'on' && !String(form.get('entity_name') || '').trim()) {
+    missing.push('Entity name');
+  }
   if (missing.length) {
     throw new Error(`Please fill in: ${missing.join(', ')}.`);
   }
@@ -139,10 +142,13 @@ export async function createLoan(form: FormData) {
     const { data: nums } = await supabase.from('loans').select('loan_number');
     const loanNumber = nextLoanNumber((nums ?? []).map((r: any) => r.loan_number));
 
+    const isEntity = String(form.get('is_entity') || '') === 'on';
     const { error } = await supabase.from('loans').insert({
       loan_number: loanNumber,
       borrower_id: borrowerId,
       lender_id: lenderId,
+      is_entity: isEntity,
+      entity_name: isEntity ? String(form.get('entity_name') || '').trim() : null,
       property: String(form.get('property') || '').trim(),
       loan_amount: loanAmount,
       acquisition,
@@ -175,8 +181,11 @@ export async function updateLoan(loanId: string, form: FormData) {
     const acquisition = Number(form.get('acquisition') || 0);
     const construction = Math.max(0, loanAmount - acquisition);
 
+    const isEntity = String(form.get('is_entity') || '') === 'on';
     const { error } = await supabase.from('loans').update({
       lender_id: lenderId,
+      is_entity: isEntity,
+      entity_name: isEntity ? String(form.get('entity_name') || '').trim() : null,
       property: String(form.get('property') || '').trim(),
       loan_amount: loanAmount,
       acquisition,

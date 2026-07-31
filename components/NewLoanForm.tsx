@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createLoan } from '@/lib/actions';
 import LenderSelect, { type LenderOption } from '@/components/LenderSelect';
+import EntityFields from '@/components/EntityFields';
 import { formatPhone, formatAddress } from '@/lib/formatting';
 
 export default function NewLoanForm({ lenders }: { lenders: LenderOption[] }) {
@@ -53,6 +54,7 @@ export default function NewLoanForm({ lenders }: { lenders: LenderOption[] }) {
                 placeholder="123 Main St, Springfield, IL 62704"
               />
             </div>
+            <EntityFields />
             <LenderSelect lenders={lenders} />
             <div className="field-wrap"><label>Loan Amount *</label><input className="field" type="number" step="0.01" name="loan_amount" value={loanAmount || ''} onChange={e => setLoanAmount(Number(e.target.value))} required /></div>
             <div className="field-wrap"><label>Acquisition *</label><input className="field" type="number" step="0.01" name="acquisition" value={acquisition || ''} onChange={e => setAcquisition(Number(e.target.value))} required /></div>
