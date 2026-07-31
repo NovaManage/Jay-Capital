@@ -82,7 +82,7 @@ export default function ClaimAccountCard({
                 Cancel
               </button>
               <button className="btn" disabled={busy} onClick={submit}>
-                {busy ? 'Setting up\u2026' : 'Create account'}
+                {busy ? 'Setting up…' : 'Create account'}
               </button>
             </div>
           </div>

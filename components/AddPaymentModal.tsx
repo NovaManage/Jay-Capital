@@ -108,7 +108,7 @@ export default function AddPaymentModal({
             </div>
             <div className="field-wrap">
               <label>Method</label>
-              <input className="field" value={method} onChange={e => setMethod(e.target.value)} placeholder="Wire, QuickPay, check\u2026" />
+              <input className="field" value={method} onChange={e => setMethod(e.target.value)} placeholder="Wire, QuickPay, check…" />
             </div>
             <div className="field-wrap">
               <label>Note</label>
@@ -161,7 +161,7 @@ export default function AddPaymentModal({
           {err && <div className="alert error" style={{ margin: 0 }}>{err}</div>}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             <button className="btn secondary" disabled={busy} onClick={() => setOpen(false)}>Cancel</button>
-            <button className="btn" disabled={busy} onClick={submit}>{busy ? 'Saving\u2026' : isEdit ? 'Save payment' : 'Record payment'}</button>
+            <button className="btn" disabled={busy} onClick={submit}>{busy ? 'Saving…' : isEdit ? 'Save payment' : 'Record payment'}</button>
           </div>
         </div>
       </Modal>

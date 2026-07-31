@@ -83,7 +83,7 @@ export default function EmailStatementControls({
         </div>
 
         <button className="btn" disabled={busy || selected.length === 0} onClick={send}>
-          {busy ? 'Sending\u2026' : `Email ${selected.length} statement${selected.length === 1 ? '' : 's'}`}
+          {busy ? 'Sending…' : `Email ${selected.length} statement${selected.length === 1 ? '' : 's'}`}
         </button>
       </div>
 

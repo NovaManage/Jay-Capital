@@ -144,7 +144,7 @@ export default function PortfolioTable({ loans, canEdit }: { loans: LoanRow[]; c
         <div className="toolbar">
           <input
             className="search"
-            placeholder="Search borrower, property, lender, ID, amount\u2026"
+            placeholder="Search borrower, property, lender, ID, amount…"
             value={q}
             onChange={e => setQ(e.target.value)}
           />

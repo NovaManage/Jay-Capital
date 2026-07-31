@@ -188,7 +188,7 @@ export default function StatementView({
         {(payInfo?.instructions || payInfo?.method) && (
           <div style={{ marginTop: 34, background: 'var(--pale)', borderRadius: 8, padding: '18px 20px' }}>
             <div style={{ color: 'var(--navy)', fontWeight: 700, marginBottom: 6 }}>
-              How to Pay{payInfo.method ? ` \u2014 ${payInfo.method}` : ''}
+              How to Pay{payInfo.method ? ` — ${payInfo.method}` : ''}
             </div>
             {payInfo.instructions && (
               <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>{payInfo.instructions}</div>

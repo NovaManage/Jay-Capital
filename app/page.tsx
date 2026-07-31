@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Logo from '@/components/Logo';
 
 export const metadata: Metadata = {
-  title: 'Jay Capital Funding \u2014 Residential, Commercial, HELOC & Hard Money Lending',
+  title: 'Jay Capital Funding — Residential, Commercial, HELOC & Hard Money Lending',
   description:
     'Jay Capital Funding arranges residential, commercial, home equity and hard money financing, and stays on the file through closing and every draw after it.',
 };
@@ -11,15 +11,16 @@ export const metadata: Metadata = {
 const PHONE = '(845) 828-0731';
 const PHONE_HREF = 'tel:+18458280731';
 const EMAIL = 'Yossi@JayCapitalFunding.com';
-const EMAIL_HREF = 'mailto:Yossi@JayCapitalFunding.com';
+// subject prefilled so the message lands looking like an enquiry, not blank
+const EMAIL_HREF = 'mailto:Yossi@JayCapitalFunding.com?subject=Loan%20enquiry';
 
 const SERVICES = [
   { tag: 'Residential', title: 'Homes and rentals',
-    body: 'Purchases and refinances for the house you live in and the ones you rent out \u2014 including borrowers whose income does not fit a standard box.' },
+    body: 'Purchases and refinances for the house you live in and the ones you rent out — including borrowers whose income does not fit a standard box.' },
   { tag: 'Commercial', title: 'Income-producing property',
     body: 'Multifamily, mixed-use, retail and office. Acquisition, refinance, and cash-out against property you already hold.' },
   { tag: 'HELOC', title: 'Home equity line of credit',
-    body: 'Draw against equity you have already built, and pay interest only on what you actually use \u2014 useful when a project\u2019s timing is not yet fixed.' },
+    body: 'Draw against equity you have already built, and pay interest only on what you actually use — useful when a project’s timing is not yet fixed.' },
   { tag: 'Hard money', title: 'Speed and construction',
     body: 'Asset-based capital when a deal will not wait for a conventional timeline, with construction draws released as the work gets done.' },
 ];
@@ -64,7 +65,7 @@ export default function LandingPage() {
               it properly, and stay on the file long after the wire clears.
             </p>
             <div className="lp-cta-row">
-              <a className="lp-btn brass" href={PHONE_HREF}>Call {PHONE}</a>
+              <a className="lp-btn ghost" href={PHONE_HREF}>Call us</a>
               <a className="lp-btn ghost" href={EMAIL_HREF}>Email us</a>
             </div>
           </div>
@@ -97,7 +98,7 @@ export default function LandingPage() {
             <h2 style={{ marginTop: 14 }}>Four kinds of lending, one relationship.</h2>
             <p>
               A borrower rarely needs the same thing twice. The house, the building, the
-              equity line and the fix-and-flip all get financed differently \u2014 so we place
+              equity line and the fix-and-flip all get financed differently — so we place
               each one where it belongs instead of forcing it through a single product.
             </p>
           </div>
@@ -139,7 +140,7 @@ export default function LandingPage() {
             <p style={{ color: '#4A5568', fontSize: 17, maxWidth: '48ch', marginTop: 14 }}>
               Every Jay Capital borrower gets a private portal: current balance, what has
               been disbursed, what is left to draw, every payment received, and a
-              downloadable statement for any month \u2014 without a phone call to find out
+              downloadable statement for any month — without a phone call to find out
               where you stand.
             </p>
             <div className="lp-cta-row" style={{ marginTop: 26 }}>

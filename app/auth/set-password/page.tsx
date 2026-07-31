@@ -86,7 +86,7 @@ export default function SetPasswordPage() {
             </div>
             {error && <div className="alert error">{error}</div>}
             <button className="btn" style={{ width: '100%' }} disabled={busy || done} type="submit">
-              {busy ? 'Saving\u2026' : done ? 'Saved' : 'Save password and continue'}
+              {busy ? 'Saving…' : done ? 'Saved' : 'Save password and continue'}
             </button>
           </form>
         )}

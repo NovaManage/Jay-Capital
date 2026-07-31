@@ -11,12 +11,14 @@ export interface StatementExtras {
   payInfo?: { method: string | null; instructions: string | null } | null;
 }
 
-const NAVY = rgb(0x1f / 255, 0x38 / 255, 0x64 / 255);
-const NAVY_MED = rgb(0x2e / 255, 0x4b / 255, 0x7a / 255);
+// Same values as the portal and the marketing site, from the branding package.
+const NAVY = rgb(0x04 / 255, 0x16 / 255, 0x2a / 255);   // brand ink
+const NAVY_MED = rgb(0x0e / 255, 0x2a / 255, 0x47 / 255);
+const GOLD = rgb(0xc0 / 255, 0x95 / 255, 0x4a / 255);   // brand gold
 const INK = rgb(0.2, 0.2, 0.2);
 const MUTED = rgb(0.42, 0.48, 0.56);
-const SOFT = rgb(0x85 / 255, 0x9a / 255, 0xc6 / 255);
-const PALE = rgb(0xee / 255, 0xf2 / 255, 0xf9 / 255);
+const SOFT = rgb(0xa8 / 255, 0xb6 / 255, 0xc9 / 255);
+const PALE = rgb(0xed / 255, 0xf2 / 255, 0xf8 / 255);
 
 /**
  * Statement as a print-ready PDF, laid out to mirror the website loan view:
@@ -61,7 +63,7 @@ export async function statementPDF(
   const tw = bold.widthOfTextAtSize(title, 18);
   text(title, (width - tw) / 2, y, 18, bold, NAVY);
   y -= 12;
-  page.drawRectangle({ x: M, y: y - 4, width: width - 2 * M, height: 3, color: NAVY });
+  page.drawRectangle({ x: M, y: y - 4, width: width - 2 * M, height: 3, color: GOLD });
   y -= 28;
 
   // ---- Borrower (full address, wrapped) on the left, date + period on the right

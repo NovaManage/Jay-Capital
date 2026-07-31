@@ -63,7 +63,7 @@ export default function EditLoanForm({ loan, lenders }: { loan: Loan; lenders: L
           </div>
           <p className="muted" style={{ fontSize: 12 }}>All fields are required except the borrower&apos;s phone number. Construction is calculated as Loan Amount minus Acquisition.</p>
           <div style={{ marginTop: 12 }}>
-            <button className="btn" disabled={busy} type="submit">{busy ? 'Saving\u2026' : 'Save Changes'}</button>
+            <button className="btn" disabled={busy} type="submit">{busy ? 'Saving…' : 'Save Changes'}</button>
           </div>
         </form>
       </div>

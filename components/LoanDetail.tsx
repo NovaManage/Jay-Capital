@@ -156,7 +156,7 @@ export default function LoanDetail({
             <a className="btn" href={pdfHref} target="_blank" rel="noopener">Download PDF</a>
           </div>
         </div>
-        <p className="muted" style={{ marginTop: 0 }}>Statement date {fmtDate(stmtDate)}{stmt.prepaidAtClosing ? ' \u00b7 closing month, interest prepaid at closing' : ''}</p>
+        <p className="muted" style={{ marginTop: 0 }}>Statement date {fmtDate(stmtDate)}{stmt.prepaidAtClosing ? ' · closing month, interest prepaid at closing' : ''}</p>
         <div className="summary">
           <div className="row"><span className="k">Total disbursed (as of period)</span><span className="v">{money(stmt.totalDisbursed)}</span></div>
           <div className="row"><span className="k">Total draws this period</span><span className="v">{money(stmt.periodDrawTotal)}</span></div>
@@ -169,7 +169,7 @@ export default function LoanDetail({
         </div>
         {ledger.priorUnpaid.length > 0 && (
           <p className="muted" style={{ marginBottom: 0 }}>
-            Past due: {ledger.priorUnpaid.map(r => `${fmtDate(r.statementDate)} ${money(r.balance)}`).join(' \u00b7 ')}
+            Past due: {ledger.priorUnpaid.map(r => `${fmtDate(r.statementDate)} ${money(r.balance)}`).join(' · ')}
           </p>
         )}
         {ledger.unapplied > 0.005 && (

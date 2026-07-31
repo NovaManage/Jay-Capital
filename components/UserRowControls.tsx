@@ -69,7 +69,7 @@ export default function UserRowControls({ user, isSelf }: { user: UserRow; isSel
           {err && <div className="alert error" style={{ margin: 0 }}>{err}</div>}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             <button className="btn secondary" disabled={busy} onClick={() => setEditOpen(false)}>Cancel</button>
-            <button className="btn" disabled={busy} onClick={save}>{busy ? 'Saving\u2026' : 'Save'}</button>
+            <button className="btn" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save'}</button>
           </div>
         </div>
       </Modal>

@@ -70,7 +70,7 @@ export default function ImportPage() {
                 else setResults(res.data ?? []);
                 setBusy(false);
               }}>
-              {busy ? 'Importing\u2026' : `Import ${rows.length} loans`}
+              {busy ? 'Importing…' : `Import ${rows.length} loans`}
             </button>
           </>
         )}

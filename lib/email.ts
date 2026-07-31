@@ -73,8 +73,8 @@ export async function emailStatement(loanId: string, months: string[]) {
 
     const multi = cleanMonths.length > 1;
     const subject = multi
-      ? `Your Jay Capital statements (${dues.length}) \u2014 ${loan.property}`
-      : `Your Jay Capital statement \u2014 ${dues[0].label}`;
+      ? `Your Jay Capital statements (${dues.length}) — ${loan.property}`
+      : `Your Jay Capital statement — ${dues[0].label}`;
 
     const navy = '#1F3864', muted = '#6B7A90', pale = '#EEF2F9';
     const dueRows = dues.map(d =>

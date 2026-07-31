@@ -77,7 +77,7 @@ export default function InviteUser() {
           {err && <div className="alert error" style={{ margin: 0 }}>{err}</div>}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
             <button className="btn secondary" disabled={busy} onClick={() => setOpen(false)}>Cancel</button>
-            <button className="btn" disabled={busy} onClick={submit}>{busy ? 'Working\u2026' : 'Create user'}</button>
+            <button className="btn" disabled={busy} onClick={submit}>{busy ? 'Working…' : 'Create user'}</button>
           </div>
         </div>
       </Modal>

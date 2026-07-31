@@ -91,7 +91,7 @@ function LoginForm() {
           {info && <div className="alert info">{info}</div>}
 
           <button className="btn" style={{ width: '100%' }} disabled={busy} type="submit">
-            {busy ? 'Working\u2026' : mode === 'password' ? 'Sign in' : 'Send sign-in link'}
+            {busy ? 'Working…' : mode === 'password' ? 'Sign in' : 'Send sign-in link'}
           </button>
         </form>
 

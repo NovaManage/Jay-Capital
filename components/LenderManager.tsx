@@ -144,7 +144,7 @@ export default function LenderManager({ lenders }: { lenders: LenderRow[] }) {
           {err && <div className="alert error" style={{ margin: 0 }}>{err}</div>}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             <button className="btn secondary" disabled={busy} onClick={() => setAddOpen(false)}>Cancel</button>
-            <button className="btn" disabled={busy} onClick={add}>{busy ? 'Adding\u2026' : 'Add lender'}</button>
+            <button className="btn" disabled={busy} onClick={add}>{busy ? 'Adding…' : 'Add lender'}</button>
           </div>
         </div>
       </Modal>
@@ -155,7 +155,7 @@ export default function LenderManager({ lenders }: { lenders: LenderRow[] }) {
           {err && <div className="alert error" style={{ margin: 0 }}>{err}</div>}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             <button className="btn secondary" disabled={busy} onClick={() => setEditing(null)}>Cancel</button>
-            <button className="btn" disabled={busy} onClick={saveEdit}>{busy ? 'Saving\u2026' : 'Save'}</button>
+            <button className="btn" disabled={busy} onClick={saveEdit}>{busy ? 'Saving…' : 'Save'}</button>
           </div>
         </div>
       </Modal>

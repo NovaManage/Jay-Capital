@@ -1,13 +1,15 @@
 :root {
-  --navy:      #1F3864;
-  --navy-med:  #2E4B7A;
-  --navy-soft: #D9E1F2;
-  --row-alt:   #F4F7FB;
-  --border:    #B4C6E7;
+  /* Portal palette, pulled onto the branding package so the app and the
+     marketing site read as one company. --navy IS the brand ink. */
+  --navy:      #04162A;
+  --navy-med:  #0E2A47;
+  --navy-soft: #D2DCE8;
+  --row-alt:   #F5F8FB;
+  --border:    #C2CFDE;
   --ink:       #333333;
   --muted:     #6B7A90;
   --bg:        #F7F9FC;
-  --pale:      #EEF2F9;
+  --pale:      #EDF2F8;
   --danger:    #B3261E;
   --ok:        #1B7F4F;
 
@@ -37,10 +39,10 @@ a { color: var(--navy-med); }
   box-shadow: 0 1px 3px rgba(31,56,100,.06); padding: 24px 28px;
 }
 h1.title {
-  color: var(--navy); font-size: 24px; font-weight: 800; letter-spacing: .05em;
-  text-transform: uppercase; text-align: center; margin: 0 0 4px;
+  color: var(--navy); font-family: var(--display); font-size: 24px; font-weight: 500;
+  letter-spacing: .09em; text-transform: uppercase; text-align: center; margin: 0 0 4px;
 }
-.rule { height: 3px; background: var(--navy); border-radius: 2px; margin: 14px 0 24px; }
+.rule { height: 3px; background: var(--brass); border-radius: 2px; margin: 14px 0 24px; }
 .muted { color: var(--muted); }
 
 /* Top navigation */
@@ -49,6 +51,7 @@ h1.title {
   padding: 12px 24px; display: flex; align-items: center; gap: 20px;
 }
 .nav .brand { color: var(--navy); font-weight: 800; letter-spacing: .04em; }
+.nav { gap: 20px; }
 .nav a { text-decoration: none; color: var(--muted); font-weight: 600; padding: 6px 10px; border-radius: 6px; }
 .nav a:hover, .nav a.active { color: var(--navy); background: var(--pale); }
 .nav .spacer { flex: 1; }
