@@ -80,24 +80,43 @@ export async function statementPDF(
   // 78pt floor keeps content clear of the footer band.
   const ensure = (need: number) => { if (y - need < 74) { page = newPage(); y = 748; } };
 
-  // ---- Letterhead: mark and company on the left, contact block on the right
-  const markH = 32, markW = markH * MARK_RATIO;
-  page.drawImage(mark, { x: M, y: y - 16, width: markW, height: markH });
-  text(BRAND.company.toUpperCase(), M + markW + 11, y + 3, 12, bold, NAVY);
-  text('Loan servicing', M + markW + 11, y - 8, 8, font, GOLD);
+  /** Draw text centred on cx with letter tracking; returns its total width. */
+  const tracked = (str: string, cx: number, yy: number, size: number, f: typeof font, color: any, track: number) => {
+    const chars = [...str];
+    const widths = chars.map(ch => f.widthOfTextAtSize(ch, size));
+    const total = widths.reduce((a, b) => a + b, 0) + track * (chars.length - 1);
+    let x = cx - total / 2;
+    chars.forEach((ch, i) => {
+      page.drawText(ch, { x, y: yy, size, font: f, color });
+      x += widths[i] + track;
+    });
+    return total;
+  };
 
-  rightText(BRAND.address, width - M, y + 4, 8, font, MUTED);
-  rightText(BRAND.phone, width - M, y - 5, 8, font, MUTED);
-  rightText(BRAND.email, width - M, y - 14, 8, font, MUTED);
+  // ---- Header: the logo on its own, centred, mark stacked over the wordmark.
+  // Company details are the footer's job -- they were on the page twice.
+  const cx = width / 2;
+  const markH = 26, markW = markH * MARK_RATIO;
+  page.drawImage(mark, { x: cx - markW / 2, y: y - 8, width: markW, height: markH });
 
-  y -= 28;
-  page.drawRectangle({ x: M, y: y - 4, width: width - 2 * M, height: 2.5, color: GOLD });
-  y -= 21;
+  y -= 22;
+  tracked('JAY CAPITAL', cx, y, 10.5, bold, NAVY, 2.3);
+
+  y -= 11;
+  const fundW = tracked('FUNDING', cx, y, 6.5, bold, GOLD, 3.6);
+  // the hairlines that flank FUNDING in the brand lockup
+  const gap = 7, ruleW = 26;
+  page.drawRectangle({ x: cx - fundW / 2 - gap - ruleW, y: y + 2, width: ruleW, height: 0.7, color: GOLD });
+  page.drawRectangle({ x: cx + fundW / 2 + gap, y: y + 2, width: ruleW, height: 0.7, color: GOLD });
+
+  y -= 16;
+  page.drawRectangle({ x: M, y: y - 2, width: width - 2 * M, height: 1.6, color: GOLD });
+  y -= 17;
 
   const title = 'LOAN STATEMENT';
-  const tw = bold.widthOfTextAtSize(title, 15);
-  text(title, (width - tw) / 2, y, 15, bold, NAVY);
-  y -= 22;
+  const tw = bold.widthOfTextAtSize(title, 14);
+  text(title, (width - tw) / 2, y, 14, bold, NAVY);
+  y -= 20;
 
   // ---- Borrower (full address, wrapped) on the left, date + period on the right
   const topY = y;
@@ -119,7 +138,7 @@ export async function statementPDF(
   rightText('Period', width - M, ry, 9, font, MUTED); ry -= 12;
   rightText(period.label, width - M, ry, 9, font, INK);
 
-  y = Math.min(y, ry) - 26;
+  y = Math.min(y, ry) - 22;
 
   // ---- TWO-COLUMN summary, mirroring the website loan view
   const GAP = 28;
@@ -147,7 +166,7 @@ export async function statementPDF(
     ['Current Charges', money(ledger.currentCharge)],
   ];
 
-  const ROW = 17;
+  const ROW = 16;
   ensure(Math.max(leftRows.length, rightRows.length + 2) * ROW + 20);
 
   const drawCol = (rows: [string, string][], x: number, xr: number, startY: number) => {
@@ -171,7 +190,7 @@ export async function statementPDF(
   rightText(money(ledger.amountDue), rightR - 10, rightEnd + 2, 12, bold, NAVY);
   rightEnd -= 26;
 
-  y = Math.min(leftEnd, rightEnd) - 18;
+  y = Math.min(leftEnd, rightEnd) - 15;
 
   // ---- Draw table: THIS PERIOD ONLY
   ensure(58);
