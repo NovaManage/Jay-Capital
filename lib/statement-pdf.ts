@@ -181,14 +181,20 @@ export async function statementPDF(
   };
 
   const leftEnd = drawCol(leftRows, leftX, leftR, y);
-  let rightEnd = drawCol(rightRows, rightX, rightR, y);
+  drawCol(rightRows, rightX, rightR, y);
 
-  // Amount Due band, sitting under the right column like the website card
-  rightEnd -= 2;
-  page.drawRectangle({ x: rightX, y: rightEnd - 6, width: colW, height: 26, color: PALE });
-  text('Amount Due', rightX + 10, rightEnd + 2, 12, bold, NAVY);
-  rightText(money(ledger.amountDue), rightR - 10, rightEnd + 2, 12, bold, NAVY);
-  rightEnd -= 26;
+  // Amount Due band, sitting under the right column like the website card.
+  // Anchored to the LAST ROW's baseline, not to the running cursor: deriving
+  // it from the row pitch meant tightening ROW walked the band up into the
+  // Current Charges text above it.
+  const lastBaseline = y - (rightRows.length - 1) * ROW;
+  const bandH = 24;
+  const bandTop = lastBaseline - 12;          // clears that row's underline at -5
+  const bandY = bandTop - bandH;
+  page.drawRectangle({ x: rightX, y: bandY, width: colW, height: bandH, color: PALE });
+  text('Amount Due', rightX + 10, bandY + 8, 12, bold, NAVY);
+  rightText(money(ledger.amountDue), rightR - 10, bandY + 8, 12, bold, NAVY);
+  const rightEnd = bandY - 4;
 
   y = Math.min(leftEnd, rightEnd) - 15;
 
