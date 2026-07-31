@@ -1,4 +1,5 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, type PDFPage } from 'pdf-lib';
+import { MARK_PNG_BASE64, BRAND } from '@/lib/brand-assets';
 import { buildStatement, drawInterest, type Draw as EngineDraw } from '@/lib/interest';
 import { money, pct, fmtDate, statementPeriod, borrowerDisplayName } from '@/lib/format';
 import { buildLedger, type PaymentRow, type AllocationRow } from '@/lib/ledger';
@@ -43,11 +44,31 @@ export async function statementPDF(
   const shortPeriod = stmt.periodEnd.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
   const doc = await PDFDocument.create();
-  let page = doc.addPage([612, 792]); // US Letter
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const { width } = page.getSize();
-  const M = 54;
+  const mark = await doc.embedPng(Buffer.from(MARK_PNG_BASE64, 'base64'));
+
+  const PW = 612, PH = 792, M = 54;
+  const MARK_RATIO = mark.width / mark.height;
+  const pages: PDFPage[] = [];
+
+  /**
+   * The watermark is drawn as the page is created, so everything else lands on
+   * top of it. Drawing it at the end would float it over the numbers.
+   */
+  const newPage = (): PDFPage => {
+    const p = doc.addPage([PW, PH]);
+    const wmH = 430, wmW = wmH * MARK_RATIO;
+    p.drawImage(mark, {
+      x: (PW - wmW) / 2, y: (PH - wmH) / 2,
+      width: wmW, height: wmH, opacity: 0.05,
+    });
+    pages.push(p);
+    return p;
+  };
+
+  let page = newPage();
+  const width = PW;
   let y = 748;
 
   const text = (s: string, x: number, yy: number, size = 10, f = font, color = INK) =>
@@ -56,15 +77,27 @@ export async function statementPDF(
     const w = f.widthOfTextAtSize(s, size);
     page.drawText(s, { x: xRight - w, y: yy, size, font: f, color });
   };
-  const ensure = (need: number) => { if (y - need < 60) { page = doc.addPage([612, 792]); y = 748; } };
+  // 78pt floor keeps content clear of the footer band.
+  const ensure = (need: number) => { if (y - need < 74) { page = newPage(); y = 748; } };
 
-  // ---- Title + navy rule
-  const title = 'LOAN STATEMENT';
-  const tw = bold.widthOfTextAtSize(title, 18);
-  text(title, (width - tw) / 2, y, 18, bold, NAVY);
-  y -= 12;
-  page.drawRectangle({ x: M, y: y - 4, width: width - 2 * M, height: 3, color: GOLD });
+  // ---- Letterhead: mark and company on the left, contact block on the right
+  const markH = 32, markW = markH * MARK_RATIO;
+  page.drawImage(mark, { x: M, y: y - 16, width: markW, height: markH });
+  text(BRAND.company.toUpperCase(), M + markW + 11, y + 3, 12, bold, NAVY);
+  text('Loan servicing', M + markW + 11, y - 8, 8, font, GOLD);
+
+  rightText(BRAND.address, width - M, y + 4, 8, font, MUTED);
+  rightText(BRAND.phone, width - M, y - 5, 8, font, MUTED);
+  rightText(BRAND.email, width - M, y - 14, 8, font, MUTED);
+
   y -= 28;
+  page.drawRectangle({ x: M, y: y - 4, width: width - 2 * M, height: 2.5, color: GOLD });
+  y -= 21;
+
+  const title = 'LOAN STATEMENT';
+  const tw = bold.widthOfTextAtSize(title, 15);
+  text(title, (width - tw) / 2, y, 15, bold, NAVY);
+  y -= 22;
 
   // ---- Borrower (full address, wrapped) on the left, date + period on the right
   const topY = y;
@@ -114,7 +147,7 @@ export async function statementPDF(
     ['Current Charges', money(ledger.currentCharge)],
   ];
 
-  const ROW = 18;
+  const ROW = 17;
   ensure(Math.max(leftRows.length, rightRows.length + 2) * ROW + 20);
 
   const drawCol = (rows: [string, string][], x: number, xr: number, startY: number) => {
@@ -173,7 +206,7 @@ export async function statementPDF(
 
   // ---- payments received this period
   if (ledger.paymentsInPeriod.length) {
-    y -= 16; ensure(50);
+    y -= 13; ensure(50);
     text('Payments Received', M, y + 6, 11, bold, NAVY);
     y -= 18;
     page.drawRectangle({ x: M, y: y - 4, width: width - 2 * M, height: 20, color: NAVY_MED });
@@ -195,7 +228,7 @@ export async function statementPDF(
 
   // ---- anything still open from earlier months
   if (ledger.priorUnpaid.length) {
-    y -= 16; ensure(60);
+    y -= 13; ensure(60);
     text('Unpaid Previous Charges', M, y + 6, 11, bold, rgb(0x8a / 255, 0x1c / 255, 0x18 / 255));
     y -= 18;
     page.drawRectangle({ x: M, y: y - 4, width: width - 2 * M, height: 20, color: NAVY_MED });
@@ -223,22 +256,34 @@ export async function statementPDF(
   const pay = extras.payInfo;
   if (pay && (pay.instructions || pay.method)) {
     const lines = String(pay.instructions || '').split(/\r?\n/).filter(l => l.trim() !== '');
-    const boxH = 30 + lines.length * 13;
-    y -= 18;
-    if (y - boxH < 60) { page = doc.addPage([612, 792]); y = 748; }
-    page.drawRectangle({ x: M, y: y - boxH + 14, width: width - 2 * M, height: boxH, color: PALE });
-    text(`How to Pay${pay.method ? ' -- ' + pay.method : ''}`, M + 12, y, 11, bold, NAVY);
-    y -= 17;
-    for (const l of lines) {
-      text(l.trim().slice(0, 88), M + 12, y, 9.5, font, INK);
-      y -= 13;
-    }
+    const boxH = 25 + lines.length * 11.5;
     y -= 14;
+    if (y - boxH < 58) { page = newPage(); y = 748; }
+    page.drawRectangle({ x: M, y: y - boxH + 14, width: width - 2 * M, height: boxH, color: PALE });
+    text(`How to Pay${pay.method ? ' — ' + pay.method : ''}`, M + 12, y, 10.5, bold, NAVY);
+    y -= 15;
+    for (const l of lines) {
+      text(l.trim().slice(0, 92), M + 12, y, 9, font, INK);
+      y -= 11.5;
+    }
+    y -= 12;
   }
 
-  y -= 12;
-  if (y < 44) { page = doc.addPage([612, 792]); y = 748; }
-  text('Questions about this statement? Reply directly to the email this was sent from.', M, y, 9, font, MUTED);
+  // ---- footer on every page, once the page count is known
+  const askLine = 'Questions about this statement? Reply directly to the email this was sent from.';
+  const footLine = `${BRAND.company}  ·  ${BRAND.address}  ·  ${BRAND.phone}  ·  ${BRAND.email}`;
+  pages.forEach((p, i) => {
+    p.drawRectangle({ x: M, y: 64, width: PW - 2 * M, height: 0.8, color: GOLD });
+    const aw = font.widthOfTextAtSize(askLine, 7.5);
+    p.drawText(askLine, { x: (PW - aw) / 2, y: 52, size: 7.5, font, color: MUTED });
+    const fw = bold.widthOfTextAtSize(footLine, 7.5);
+    p.drawText(footLine, { x: (PW - fw) / 2, y: 39, size: 7.5, font: bold, color: NAVY });
+    if (pages.length > 1) {
+      const pn = `Page ${i + 1} of ${pages.length}`;
+      const pw = font.widthOfTextAtSize(pn, 7.5);
+      p.drawText(pn, { x: PW - M - pw, y: 27, size: 7.5, font, color: MUTED });
+    }
+  });
 
   return await doc.save();
 }

@@ -65,7 +65,7 @@ export default function LandingPage() {
               it properly, and stay on the file long after the wire clears.
             </p>
             <div className="lp-cta-row">
-              <a className="lp-btn ghost" href={PHONE_HREF}>Call us</a>
+              <a className="lp-btn brass" href={PHONE_HREF}>Call us</a>
               <a className="lp-btn ghost" href={EMAIL_HREF}>Email us</a>
             </div>
           </div>
