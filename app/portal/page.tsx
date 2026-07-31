@@ -19,7 +19,7 @@ export default async function PortalPage() {
 
   const Nav = (
     <nav className="nav">
-      <Logo size={34} /><span className="spacer" />
+      <Logo size={26} /><span className="spacer" />
       <span className="muted" style={{ fontSize: 13 }}>{user?.email}</span>
       <form action="/auth/signout" method="post" style={{ margin: 0 }}>
         <button className="btn secondary">Sign out</button>

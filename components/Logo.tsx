@@ -1,53 +1,86 @@
 import * as React from 'react';
 
 /**
- * Jay Capital Funding mark.
+ * Jay Capital Funding identity, taken from the supplied branding package.
  *
- * An arch with a keystone: the arch is the building the money is for, the
- * keystone is the piece that lets it stand. The right leg drops and hooks
- * left, so the whole figure also reads as a J. Navy is the portal's own
- * --navy; the keystone is brass, which is where the warmth comes from --
- * navy on its own reads cold and institutional.
+ * The mark is the traced vector of the supplied artwork (public/logo-mark.svg)
+ * so it stays crisp at any size instead of being an upscaled bitmap. The gold
+ * gradient and the ink colour are sampled from the same artwork.
  */
-export function LogoMark({ size = 40, tone = 'navy' }: { size?: number; tone?: 'navy' | 'light' }) {
-  const stroke = tone === 'light' ? '#FFFFFF' : '#1F3864';
-  const key = tone === 'light' ? '#E4C07A' : '#B08A4A';
+const INK = '#04162A';     // wordmark navy from the branding sheet
+const GOLD = '#C0954A';    // FUNDING gold from the branding sheet
+
+export function LogoMark({ size = 40 }: { size?: number }) {
+  // artwork is taller than it is wide (1168 x 1728)
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false">
-      <path
-        d="M14 55 L14 30 A18 18 0 0 1 50 30 L50 45 A9 9 0 0 1 32 45"
-        stroke={stroke} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"
-      />
-      <path d="M25.5 9.5 L38.5 9.5 L41 20 L23 20 Z" fill={key} />
-    </svg>
+    <img
+      src="/logo-mark.svg"
+      alt=""
+      aria-hidden="true"
+      width={Math.round(size * (1168 / 1728))}
+      height={size}
+      style={{ display: 'block' }}
+    />
+  );
+}
+
+function Wordmark({ size, tone }: { size: number; tone: 'navy' | 'light' }) {
+  const ink = tone === 'light' ? '#FFFFFF' : INK;
+  const rule = tone === 'light' ? 'rgba(232,197,131,.75)' : GOLD;
+  return (
+    <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+      <span style={{
+        fontFamily: 'var(--logo)', fontWeight: 400, color: ink,
+        fontSize: size, letterSpacing: '.12em', whiteSpace: 'nowrap',
+      }}>
+        JAY CAPITAL
+      </span>
+      <span style={{
+        display: 'flex', alignItems: 'center', gap: size * 0.3,
+        width: '100%', marginTop: size * 0.28,
+      }}>
+        <span style={{ flex: 1, height: 1, background: rule, opacity: .85 }} />
+        <span style={{
+          fontFamily: 'var(--logo)', fontWeight: 400, color: GOLD,
+          fontSize: size * 0.44, letterSpacing: '.34em',
+          whiteSpace: 'nowrap', textIndent: '.34em',
+        }}>
+          FUNDING
+        </span>
+        <span style={{ flex: 1, height: 1, background: rule, opacity: .85 }} />
+      </span>
+    </span>
   );
 }
 
 export default function Logo({
-  size = 40, tone = 'navy', showWordmark = true,
-}: { size?: number; tone?: 'navy' | 'light'; showWordmark?: boolean }) {
-  const ink = tone === 'light' ? '#FFFFFF' : '#1F3864';
-  const sub = tone === 'light' ? 'rgba(255,255,255,.72)' : '#B08A4A';
+  size = 40, tone = 'navy', variant = 'horizontal', showWordmark = true,
+}: {
+  size?: number;
+  tone?: 'navy' | 'light';
+  /** horizontal: mark, hairline divider, wordmark. stacked: mark above wordmark. */
+  variant?: 'horizontal' | 'stacked';
+  showWordmark?: boolean;
+}) {
+  if (!showWordmark) return <LogoMark size={size} />;
+
+  if (variant === 'stacked') {
+    return (
+      <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: size * 0.34 }}>
+        <LogoMark size={size * 1.5} />
+        <Wordmark size={size * 0.62} tone={tone} />
+      </span>
+    );
+  }
+
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
-      <LogoMark size={size} tone={tone} />
-      {showWordmark && (
-        <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-          <span style={{
-            fontFamily: 'var(--display)', fontWeight: 600, color: ink,
-            fontSize: size * 0.46, letterSpacing: '.01em',
-          }}>
-            Jay Capital
-          </span>
-          <span style={{
-            fontFamily: 'var(--body)', fontWeight: 700, color: sub,
-            fontSize: size * 0.235, letterSpacing: '.26em', textTransform: 'uppercase',
-            marginTop: size * 0.09,
-          }}>
-            Funding
-          </span>
-        </span>
-      )}
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: size * 0.42 }}>
+      <LogoMark size={size * 1.15} />
+      <span style={{
+        width: 1, alignSelf: 'stretch',
+        background: tone === 'light' ? 'rgba(255,255,255,.28)' : 'rgba(4,22,42,.18)',
+      }} />
+      <Wordmark size={size * 0.5} tone={tone} />
     </span>
   );
 }

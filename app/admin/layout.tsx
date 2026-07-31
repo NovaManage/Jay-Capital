@@ -28,7 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <>
       <LiveRefresh />
       <nav className="nav">
-        <Link href="/admin" style={{ textDecoration: 'none', padding: 0 }}><Logo size={34} /></Link>
+        <Link href="/admin" style={{ textDecoration: 'none', padding: 0 }}><Logo size={26} /></Link>
         <Link href="/admin">Portfolio</Link>
         {isAdmin && <Link href="/admin/loans/new">New Loan</Link>}
         {isAdmin && <Link href="/admin/import">Import</Link>}

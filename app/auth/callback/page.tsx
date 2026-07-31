@@ -72,7 +72,7 @@ function CallbackInner() {
   return (
     <div className="auth-shell">
       <div className="auth-card card">
-        <div style={{ display: 'flex', justifyContent: 'center' }}><Logo size={46} /></div>
+        <div style={{ display: 'flex', justifyContent: 'center' }}><Logo size={30} variant="stacked" /></div>
         <div className="rule" />
         {error ? (
           <>
@@ -91,7 +91,7 @@ function CallbackInner() {
 
 export default function AuthCallbackPage() {
   return (
-    <Suspense fallback={<div className="auth-shell"><div className="auth-card card"><div style={{ display: 'flex', justifyContent: 'center' }}><Logo size={46} /></div></div></div>}>
+    <Suspense fallback={<div className="auth-shell"><div className="auth-card card"><div style={{ display: 'flex', justifyContent: 'center' }}><Logo size={30} variant="stacked" /></div></div></div>}>
       <CallbackInner />
     </Suspense>
   );

@@ -53,7 +53,7 @@ export default function SetPasswordPage() {
   return (
     <div className="auth-shell">
       <div className="auth-card card">
-        <div style={{ display: 'flex', justifyContent: 'center' }}><Logo size={46} /></div>
+        <div style={{ display: 'flex', justifyContent: 'center' }}><Logo size={30} variant="stacked" /></div>
         <h1 className="title" style={{ fontSize: 18, marginTop: 14 }}>Set Your Password</h1>
         <div className="rule" />
 

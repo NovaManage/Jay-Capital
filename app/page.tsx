@@ -39,7 +39,7 @@ export default function LandingPage() {
       <header className="lp-nav">
         <div className="lp-shell lp-nav-in">
           <Link href="/" aria-label="Jay Capital Funding home" style={{ textDecoration: 'none' }}>
-            <Logo size={42} />
+            <Logo size={34} />
           </Link>
           <nav className="lp-nav-links">
             <a href="#services">Lending</a>
@@ -57,7 +57,7 @@ export default function LandingPage() {
           <div>
             <div className="lp-eyebrow">Residential &middot; Commercial &middot; HELOC &middot; Hard money</div>
             <div className="lp-rule" style={{ marginTop: 18 }} />
-            <h1>One desk for<br />every kind of loan.</h1>
+            <h1>One stop.<br />Every loan.<br />Right solution.</h1>
             <p className="lp-lede">
               Most borrowers end up explaining their deal four times to four different
               people. Bring it here once. We find the lender it belongs with, structure
@@ -185,7 +185,7 @@ export default function LandingPage() {
 
       <footer className="lp-foot">
         <div className="lp-shell lp-foot-row">
-          <Logo size={38} tone="light" />
+          <Logo size={30} tone="light" />
           <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', alignItems: 'center' }}>
             <a href={PHONE_HREF}>{PHONE}</a>
             <a href={EMAIL_HREF}>{EMAIL}</a>
