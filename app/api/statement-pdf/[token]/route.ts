@@ -1,7 +1,7 @@
 import { type NextRequest } from 'next/server';
 import { serviceClient } from '@/lib/supabase-server';
 import { statementPDF } from '@/lib/statement-pdf';
-import { firstOfMonth } from '@/lib/format';
+import { firstOfMonth, clampMonth } from '@/lib/format';
 import { fetchStatementExtras } from '@/lib/statement-data';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +20,11 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
   const { data: draws } = await supabase.from('draw_details').select('*').eq('loan_id', loan.loan_id).order('draw_date', { ascending: true });
 
   const monthParam = new URL(req.url).searchParams.get('month');
-  const statementDate = monthParam ? firstOfMonth(monthParam) : firstOfMonth(new Date(), 1);
+  // Clamped to the loan's own valid range: ?month= is user-supplied, and an
+  // out-of-range value would render a statement for a month the loan did not
+  // exist in. Defaults to the month now in progress.
+  const requested = monthParam ? firstOfMonth(monthParam) : firstOfMonth(new Date(), 1);
+  const statementDate = clampMonth(requested, loan.closing_date);
 
   const extras = await fetchStatementExtras(loan.loan_id);
   const pdf = await statementPDF(loan, draws ?? [], statementDate, extras);

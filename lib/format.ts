@@ -84,11 +84,17 @@ export function monthName(dateStr: string): string {
 
 /**
  * Valid statement months, newest-first, as YYYY-MM-01.
- * Range: the loan's closing month through ONE month past the current month.
- * (If closing is July 2026, and today is July 2026, you can pick through August 2026.)
+ *
+ * Starts the month AFTER closing. A statement covers the month before its
+ * date, so the first meaningful one for a loan closing 5/22 is 6/1 -- that is
+ * the statement covering May. A 5/1 statement would cover April, before the
+ * loan existed.
+ *
+ * Ends one month past the current month, so the period now in progress can be
+ * previewed.
  */
 export function statementMonths(closingDate: string): string[] {
-  const start = firstOfMonth(closingDate);          // closing month
+  const start = firstOfMonth(closingDate, 1);       // month after closing
   const end = firstOfMonth(new Date(), 1);           // next month
   const out: string[] = [];
   let cur = start;

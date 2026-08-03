@@ -30,8 +30,16 @@ export default function AddDrawModal({
       const fd = new FormData();
       fd.set('draw_date', date);
       fd.set('amount', amount);
-      fd.set('description', 'Construction Draw');
-      setOpen(false); setDate(''); setAmount('');
+      fd.set('description', editing?.description || 'Construction Draw');
+
+      const res = isEdit
+        ? await updateDraw(loanId, editing!.id, fd)
+        : await addDraw(loanId, fd);
+
+      if (!res.ok) { setErr(res.error || 'Could not save the draw.'); setBusy(false); return; }
+
+      setOpen(false);
+      if (!isEdit) { setDate(''); setAmount(''); }
       router.refresh();
     } catch (e: any) {
       setErr(e.message);
