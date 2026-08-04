@@ -5,6 +5,7 @@ import Logo from '@/components/Logo';
 import PortalLoans, { type PortalLoan } from '@/components/PortalLoans';
 import { fetchStatementExtras } from '@/lib/statement-data';
 import { borrowerDisplayName } from '@/lib/format';
+import { logActivity } from '@/lib/activity';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -31,6 +32,8 @@ export default async function PortalPage() {
       </form>
     </nav>
   );
+
+  if (list.length) await logActivity('portal_view', list[0].loan_id, user?.id ?? null);
 
   const items: PortalLoan[] = [];
   for (const loan of list) {

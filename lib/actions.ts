@@ -3,6 +3,7 @@
 import { run } from '@/lib/result';
 import { revalidatePath } from 'next/cache';
 import { serverClient, serviceClient } from '@/lib/supabase-server';
+import { syncBorrowerLinksForEmail } from '@/lib/borrower-links';
 
 async function requireAdmin() {
   const supabase = serverClient();
@@ -167,12 +168,25 @@ export async function updateLoan(loanId: string, form: FormData) {
 
     // Update borrower fields on the loan's borrower record.
     const { data: loan } = await supabase.from('loans').select('borrower_id').eq('id', loanId).single();
+    const newEmail = String(form.get('borrower_email') || '').trim();
     if (loan?.borrower_id) {
+      const { data: before } = await supabase.from('borrowers').select('email').eq('id', loan.borrower_id).maybeSingle();
+
       await supabase.from('borrowers').update({
         name: String(form.get('borrower_name') || '').trim(),
-        email: String(form.get('borrower_email') || '').trim() || null,
+        email: newEmail || null,
         phone: String(form.get('borrower_phone') || '').trim() || null,
       }).eq('id', loan.borrower_id);
+
+      // Changing the email changes who owns the loan. Re-point the account
+      // link for BOTH addresses, so the old account loses access and the new
+      // one gains it, instead of the link silently going stale.
+      const oldEmail = String(before?.email || '').trim();
+      if (oldEmail.toLowerCase() !== newEmail.toLowerCase()) {
+        const svc = serviceClient();
+        if (oldEmail) await syncBorrowerLinksForEmail(svc, oldEmail);
+        if (newEmail) await syncBorrowerLinksForEmail(svc, newEmail);
+      }
     }
 
     const lenderId = await resolveLenderId(supabase, form);
@@ -709,7 +723,8 @@ export async function createBorrowerUser(opts: {
       role: keepRole ? currentProfile!.role : 'borrower',
     }, { onConflict: 'id' });
 
-    const linked = await linkBorrowerRecords(svc, userId, opts.email, opts.borrowerId);
+    await svc.from('borrowers').update({ user_id: userId, email: opts.email }).eq('id', opts.borrowerId);
+    const linked = await syncBorrowerLinksForEmail(svc, opts.email);
     if (linked > 1) {
       message += ` ${linked} loans are now connected to this login.`;
     }

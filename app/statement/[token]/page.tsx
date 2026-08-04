@@ -6,6 +6,7 @@ import LiveRefresh from '@/components/LiveRefresh';
 import { fetchStatementExtras } from '@/lib/statement-data';
 import { borrowerDisplayName } from '@/lib/format';
 import Logo from '@/components/Logo';
+import { logActivity } from '@/lib/activity';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -37,6 +38,7 @@ export default async function StatementPage({ params }: { params: { token: strin
     .from('borrowers').select('user_id').eq('id', loan.borrower_id).maybeSingle();
   const canClaim = !!loan.borrower_email && !borrower?.user_id;
   const extras = await fetchStatementExtras(loan.loan_id);
+  await logActivity('statement_view', loan.loan_id, null);
 
   return (
     <>

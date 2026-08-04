@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto';
 import nodemailer from 'nodemailer';
 import { run } from '@/lib/result';
 import { serviceClient } from '@/lib/supabase-server';
+import { syncBorrowerLinksForEmail, releaseMismatchedLinks } from '@/lib/borrower-links';
 
 /**
  * Borrower self-service signup.
@@ -156,12 +157,12 @@ export async function completePortalSignup(token: string, password: string) {
       id: userId, email, full_name: borrowers[0]?.name ?? null, role: 'borrower',
     }, { onConflict: 'id' });
 
-    // Claim only unclaimed records, so signing up can never take a loan off
-    // an account that already holds it.
-    const claimable = borrowers.filter(b => !b.user_id).map(b => b.id);
-    if (claimable.length) {
-      await svc.from('borrowers').update({ user_id: userId }).in('id', claimable);
-    }
+    // Claim every record carrying this address -- including any still pointing
+    // at a previous account. The email on the record is what decides ownership,
+    // so a link left behind by an admin email change must not block the
+    // rightful account. RLS cross-checks the email, so this cannot hand over a
+    // record whose email does not match.
+    await syncBorrowerLinksForEmail(svc, email);
 
     await svc.from('portal_signup_tokens').update({ used_at: new Date().toISOString() }).eq('token', token);
 
@@ -211,22 +212,20 @@ export async function changeMyEmail(newEmailRaw: string) {
     if (uErr) throw new Error(uErr.message);
     await svc.from('profiles').update({ email }).eq('id', user.id);
 
-    // Release records held under the old address, then claim unclaimed ones
-    // under the new address. Records claimed by somebody else are untouched.
-    await svc.from('borrowers').update({ user_id: null }).eq('user_id', user.id);
-    const { data: matches } = await svc.from('borrowers').select('id, name, user_id').ilike('email', email);
-    const claimable = (matches ?? []).filter(b => !b.user_id).map(b => b.id);
-    if (claimable.length) {
-      await svc.from('borrowers').update({ user_id: user.id }).in('id', claimable);
-      const name = (matches ?? [])[0]?.name;
-      if (name) await svc.from('profiles').update({ full_name: name }).eq('id', user.id);
-    }
+    // Release whatever was held under the old address, then take the records
+    // carrying the new one.
+    await releaseMismatchedLinks(svc, user.id, email);
+    const linked = await syncBorrowerLinksForEmail(svc, email);
+
+    const { data: matches } = await svc.from('borrowers').select('name').ilike('email', email).limit(1);
+    const name = (matches ?? [])[0]?.name;
+    if (name) await svc.from('profiles').update({ full_name: name }).eq('id', user.id);
 
     return {
       email,
-      linked: claimable.length,
-      message: claimable.length
-        ? `Your email is now ${email}, with ${claimable.length} loan${claimable.length === 1 ? '' : 's'} linked.`
+      linked,
+      message: linked
+        ? `Your email is now ${email}, with ${linked} loan${linked === 1 ? '' : 's'} linked.`
         : `Your email is now ${email}, but we still could not find a loan registered to it.`,
     };
   });

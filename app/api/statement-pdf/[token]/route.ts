@@ -3,6 +3,7 @@ import { serviceClient } from '@/lib/supabase-server';
 import { statementPDF } from '@/lib/statement-pdf';
 import { firstOfMonth, clampMonth } from '@/lib/format';
 import { fetchStatementExtras } from '@/lib/statement-data';
+import { logActivity } from '@/lib/activity';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -27,6 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
   const statementDate = clampMonth(requested, loan.closing_date);
 
   const extras = await fetchStatementExtras(loan.loan_id);
+  await logActivity('pdf_download', loan.loan_id, null);
   const pdf = await statementPDF(loan, draws ?? [], statementDate, extras);
   const displayName = loan.is_entity && loan.entity_name ? loan.entity_name : loan.borrower_name;
   const safeName = `Statement_${displayName.replace(/[^a-z0-9]+/gi, '_')}_${statementDate}.pdf`;
