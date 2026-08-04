@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import Logo from '@/components/Logo';
+import ContactForm from '@/components/ContactForm';
+import EmailUs from '@/components/EmailUs';
 
 export const metadata: Metadata = {
   title: 'Jay Capital Funding — Residential, Commercial, HELOC & Hard Money Lending',
@@ -12,7 +14,6 @@ const PHONE = '(845) 828-0731';
 const PHONE_HREF = 'tel:+18458280731';
 const EMAIL = 'Yossi@JayCapitalFunding.com';
 // subject prefilled so the message lands looking like an enquiry, not blank
-const EMAIL_HREF = 'mailto:Yossi@JayCapitalFunding.com?subject=Loan%20enquiry';
 
 const SERVICES = [
   { tag: 'Residential', title: 'Homes and rentals',
@@ -66,7 +67,7 @@ export default function LandingPage() {
             </p>
             <div className="lp-cta-row">
               <a className="lp-btn brass" href={PHONE_HREF}>Call us</a>
-              <a className="lp-btn ghost" href={EMAIL_HREF}>Email us</a>
+              <a className="lp-btn ghost" href="#contact">Email us</a>
             </div>
           </div>
 
@@ -163,7 +164,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-contact" id="contact">
+      <section className="lp-contact" id="contact" style={{ scrollMarginTop: 80 }}>
         <div className="lp-shell">
           <div className="lp-eyebrow" style={{ color: 'var(--brass-lt)' }}>Get in touch</div>
           <h2 style={{ marginTop: 14 }}>Tell us about the deal.</h2>
@@ -171,15 +172,23 @@ export default function LandingPage() {
             Call and you will speak to someone who can tell you whether it is financeable.
             If it is not a fit, we will say so on the first call.
           </p>
-          <div className="lp-contact-row">
-            <div className="lp-contact-item">
-              <span className="lbl">Phone</span>
-              <a href={PHONE_HREF}>{PHONE}</a>
+          <div className="lp-contact-grid">
+            <div>
+              <div className="lp-contact-row">
+                <div className="lp-contact-item">
+                  <span className="lbl">Phone</span>
+                  <a href={PHONE_HREF}>{PHONE}</a>
+                </div>
+                <div className="lp-contact-item">
+                  <span className="lbl">Email</span>
+                  <span style={{ fontSize: 16, wordBreak: 'break-all' }}>{EMAIL}</span>
+                </div>
+              </div>
+              <div style={{ marginTop: 22 }}>
+                <EmailUs className="lp-btn ghost lp-btn-onnavy" label="Open in my email app" subject="Loan enquiry" />
+              </div>
             </div>
-            <div className="lp-contact-item">
-              <span className="lbl">Email</span>
-              <a href={EMAIL_HREF}>{EMAIL}</a>
-            </div>
+            <ContactForm />
           </div>
         </div>
       </section>
@@ -189,7 +198,7 @@ export default function LandingPage() {
           <Logo size={30} tone="light" />
           <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', alignItems: 'center' }}>
             <a href={PHONE_HREF}>{PHONE}</a>
-            <a href={EMAIL_HREF}>{EMAIL}</a>
+            <a href="#contact">{EMAIL}</a>
             <Link href="/login">Borrower Portal</Link>
           </div>
           <div>&copy; {new Date().getFullYear()} Jay Capital Funding</div>

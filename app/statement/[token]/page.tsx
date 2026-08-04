@@ -7,6 +7,7 @@ import { fetchStatementExtras } from '@/lib/statement-data';
 import { borrowerDisplayName } from '@/lib/format';
 import Logo from '@/components/Logo';
 import { logActivity } from '@/lib/activity';
+import EmailUs from '@/components/EmailUs';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -23,8 +24,8 @@ export default async function StatementPage({ params }: { params: { token: strin
         </nav>
         <div className="wrap" style={{ maxWidth: 640 }}>
           <div className="card">
-            <p>Statement not found. Please check your link, or contact us at{' '}
-              <a href="mailto:Yossi@JayCapitalFunding.com">Yossi@JayCapitalFunding.com</a>.</p>
+            <p style={{ marginTop: 0 }}>Statement not found. Please check your link, or get in touch.</p>
+            <EmailUs subject="Statement link" />
           </div>
         </div>
       </>
@@ -47,9 +48,7 @@ export default async function StatementPage({ params }: { params: { token: strin
       <nav className="nav nav-borrower">
         <a href="/" style={{ textDecoration: 'none', padding: 0 }}><Logo size={40} /></a>
         <span className="spacer" />
-        <a className="muted" style={{ fontSize: 13, textDecoration: 'none' }} href="mailto:Yossi@JayCapitalFunding.com?subject=Statement%20question">
-          Yossi@JayCapitalFunding.com
-        </a>
+        <EmailUs subject="Statement question" label="Contact us" />
       </nav>
       {canClaim && <ClaimAccountCard token={params.token} email={loan.borrower_email} />}
       <StatementView

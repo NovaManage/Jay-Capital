@@ -79,6 +79,10 @@ table.bordered { border: 1px solid var(--border); border-radius: 8px; overflow: 
 .tablescroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .tablescroll table { width: 100%; min-width: 1100px; }
 @media (min-width: 1250px) { .tablescroll table { min-width: 0; } }
+/* statement tables are 4-5 columns, not the portfolio's 13 -- they only need
+   enough width to stay readable, not the full desktop minimum */
+.tablescroll.narrow table { min-width: 440px; }
+@media (min-width: 700px) { .tablescroll.narrow table { min-width: 0; } }
 th[data-key] { cursor: pointer; user-select: none; }
 th.sort-asc::after { content: ' \25B2'; font-size: 9px; }
 th.sort-desc::after { content: ' \25BC'; font-size: 9px; }
@@ -305,3 +309,111 @@ select.filter, input.field, select.field, textarea.field {
 /* Borrower header: no menu to fill it, so the logo carries the brand -- give
    it room and a little more weight than the admin bar needs. */
 .nav-borrower { padding: 18px 24px; background: #fff; }
+
+/* ============================================================
+   Contact form on the landing page
+   ============================================================ */
+.lp-form {
+  background: #fff; border-radius: 12px; padding: 24px;
+  box-shadow: 0 18px 44px rgba(4, 22, 42, .18);
+}
+.lp-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.lp-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.lp-field > span {
+  font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--navy);
+}
+.lp-field > span em { font-style: normal; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
+.lp-field input, .lp-field select, .lp-field textarea {
+  width: 100%; padding: 11px 13px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 16px;                 /* 16px stops iOS zooming the page on focus */
+  font-family: inherit; color: var(--ink); background: #fff;
+}
+.lp-field textarea { resize: vertical; min-height: 96px; }
+.lp-field input:focus, .lp-field select:focus, .lp-field textarea:focus {
+  outline: none; border-color: var(--navy-med); box-shadow: 0 0 0 3px rgba(4, 22, 42, .08);
+}
+.lp-form-err { background: #FDECEA; color: var(--danger); border-radius: 8px; padding: 10px 13px; margin-bottom: 14px; font-size: 13.5px; }
+.lp-form-note { margin: 12px 0 0; font-size: 12px; color: var(--muted); }
+.lp-form-done { text-align: center; padding: 34px 24px; }
+.lp-contact-grid { display: grid; grid-template-columns: 1fr 1.05fr; gap: 44px; align-items: start; }
+.lp-btn-onnavy { color: #fff !important; border-color: rgba(255,255,255,.4) !important; }
+.lp-btn-onnavy:hover { background: rgba(255,255,255,.1) !important; }
+
+/* ============================================================
+   Phones and tablets.
+   Touch targets stay >= 44px, and every input is 16px so iOS does not zoom
+   the whole page when one is focused.
+   ============================================================ */
+@media (max-width: 1024px) {
+  .lp-contact-grid { grid-template-columns: 1fr; gap: 30px; }
+  .wrap { padding: 20px 18px 48px; }
+}
+
+@media (max-width: 760px) {
+  /* --- marketing --- */
+  .lp-shell { padding: 0 18px; }
+  .lp-nav-in { flex-wrap: wrap; gap: 12px; padding: 12px 0; }
+  .lp-nav-links { gap: 14px; width: 100%; margin-left: 0; justify-content: space-between; }
+  .lp-nav-links a:not(.lp-btn) { font-size: 13.5px; }
+  .lp-nav-links .lp-btn { padding: 9px 15px; font-size: 13.5px; }
+  .lp-hero { padding: 34px 0 44px; }
+  .lp-lede { font-size: 16.5px; margin: 18px 0 24px; }
+  .lp-cta-row .lp-btn { flex: 1 1 auto; text-align: center; }
+  .lp-section { padding: 48px 0; }
+  .lp-head { margin-bottom: 30px; }
+  .lp-sheet-body { padding: 6px 15px 16px; }
+  .lp-sheet-row { font-size: 13.5px; gap: 12px; }
+  .lp-steps { gap: 26px; }
+  .lp-contact { padding: 52px 0; }
+  .lp-form { padding: 18px; }
+  .lp-form-grid { grid-template-columns: 1fr; gap: 0; margin-bottom: 0; }
+  .lp-foot-row { flex-direction: column; align-items: flex-start; gap: 16px; }
+
+  /* --- portal --- */
+  .wrap { padding: 16px 14px 40px; }
+  .card { padding: 18px 16px; border-radius: 10px; }
+  .nav { padding: 12px 14px; gap: 10px; flex-wrap: wrap; }
+  .nav-borrower { padding: 14px; }
+  .nav .btn, .nav .btn.secondary { padding: 9px 13px; font-size: 13.5px; }
+  h1.title { font-size: 19px; letter-spacing: .06em; }
+
+  /* tabs scroll sideways rather than stacking into a wall of boxes */
+  .loantabs {
+    flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    padding-bottom: 0;
+  }
+  .loantabs::-webkit-scrollbar { display: none; }
+  .loantab { flex: 0 0 auto; padding: 9px 15px 10px; }
+  .loantab.active { padding: 12px 16px 11px; }
+  .loantab-addr { font-size: 13.5px; }
+  .loantab-meta { font-size: 11px; }
+
+  /* the statement's month picker and PDF button */
+  .toolbar { gap: 8px; }
+  .toolbar .btn, .toolbar .filter, .toolbar select.filter { font-size: 14px; padding: 9px 12px; }
+
+  .summary .row { padding: 9px 0; font-size: 14px; }
+  .summary .row.due .k, .summary .row.due .v { font-size: 15px; }
+  .contact { gap: 14px; }
+  .contact > div:last-child { text-align: left !important; }
+
+  thead th { padding: 9px 10px; font-size: 11px; }
+  tbody td { padding: 9px 10px; font-size: 13.5px; }
+
+  .kpi { padding: 14px; }
+  .kpi .value { font-size: 19px; }
+
+  /* forms: 16px avoids the iOS zoom-on-focus jump */
+  .field, input.field, select.field, textarea.field, .search, select.filter { font-size: 16px; }
+  .form-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 420px) {
+  .lp-nav-links { gap: 10px; }
+  .lp-nav-links a:not(.lp-btn) { font-size: 12.5px; }
+  .lp-cta-row { flex-direction: column; align-items: stretch; }
+  .card { padding: 16px 13px; }
+  .nav { gap: 8px; }
+}

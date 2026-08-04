@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import StatementView, { type StatementData, type StatementDraw, type PayInfo } from '@/components/StatementView';
 import { money, shortAddress } from '@/lib/format';
+import EmailUs from '@/components/EmailUs';
 import type { PaymentRow, AllocationRow } from '@/lib/ledger';
 
 export interface PortalLoan {
@@ -67,8 +68,7 @@ export default function PortalLoans({
             your loan is registered under.
           </p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
-            <a className="btn secondary" style={{ textDecoration: 'none' }}
-               href="mailto:Yossi@JayCapitalFunding.com?subject=Portal%20access%20help">Email us</a>
+            <EmailUs subject="Portal access help" />
             <a className="btn secondary" style={{ textDecoration: 'none' }} href="tel:+18458280731">Call (845) 828-0731</a>
           </div>
         </div></div>

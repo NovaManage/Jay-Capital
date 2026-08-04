@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
+import EmailUs from '@/components/EmailUs';
 import { inspectSignupToken, completePortalSignup } from '@/lib/signup';
 import { browserClient } from '@/lib/supabase-browser';
 
@@ -65,10 +66,7 @@ export default function SetSignupPasswordPage({ params }: { params: { token: str
             <button className="btn" onClick={() => { router.replace('/portal'); router.refresh(); }}>
               Go to my portal
             </button>
-            <a className="btn secondary" style={{ textAlign: 'center', textDecoration: 'none' }}
-               href="mailto:Yossi@JayCapitalFunding.com?subject=Portal%20access%20help">
-              Email Jay Capital Funding
-            </a>
+            <EmailUs subject="Portal access help" label="Email Jay Capital Funding" />
             <a className="btn secondary" style={{ textAlign: 'center', textDecoration: 'none' }} href="tel:+18458280731">
               Call (845) 828-0731
             </a>

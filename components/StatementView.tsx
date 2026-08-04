@@ -101,7 +101,7 @@ export default function StatementView({
             language as the tables below. As a bare heading over .summary rows
             it read as a continuation of the loan details above. */}
         <div style={{
-          marginTop: 36, maxWidth: 460,
+          marginTop: 36, maxWidth: 460, width: '100%',
           border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden',
         }}>
           <div style={{
@@ -123,7 +123,7 @@ export default function StatementView({
         {ledger.paymentsInPeriod.length > 0 && (
           <>
             <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '28px 0 8px' }}>Payments Received</div>
-            <table className="bordered">
+            <div className="tablescroll narrow"><table className="bordered">
               <thead><tr><th>Date</th><th>Method</th><th>Note</th><th className="num">Amount</th></tr></thead>
               <tbody>
                 {ledger.paymentsInPeriod.map(p => (
@@ -135,13 +135,13 @@ export default function StatementView({
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </>
         )}
 
         <div style={{ color: 'var(--navy)', fontWeight: 700, margin: '28px 0 8px' }}>Construction Draws ({stmt.periodLabel})</div>
         {stmt.periodDraws.length > 0 ? (
-          <table className="bordered">
+          <div className="tablescroll narrow"><table className="bordered">
             <thead><tr><th>Date</th><th>Description</th><th className="num">Amount</th><th className="num">Interest Accrued</th></tr></thead>
             <tbody>
               {stmt.periodDraws.map((d, i) => (
@@ -158,13 +158,13 @@ export default function StatementView({
                 <td className="num" style={{ fontWeight: 700, color: 'var(--navy)' }}>{money(stmt.periodDrawInterest)}</td>
               </tr>
             </tbody>
-          </table>
+          </table></div>
         ) : <p className="muted">No draws during this period.</p>}
 
         {ledger.priorUnpaid.length > 0 && (
           <>
             <div style={{ color: 'var(--danger)', fontWeight: 700, margin: '28px 0 8px' }}>Unpaid Previous Charges</div>
-            <table className="bordered">
+            <div className="tablescroll narrow"><table className="bordered">
               <thead><tr><th>Statement Date</th><th className="num">Charged</th><th className="num">Paid</th><th className="num">Still Owed</th></tr></thead>
               <tbody>
                 {ledger.priorUnpaid.map(r => (
@@ -183,7 +183,7 @@ export default function StatementView({
                   </td>
                 </tr>
               </tbody>
-            </table>
+            </table></div>
           </>
         )}
 
