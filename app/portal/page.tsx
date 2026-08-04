@@ -6,6 +6,7 @@ import PortalLoans, { type PortalLoan } from '@/components/PortalLoans';
 import { fetchStatementExtras } from '@/lib/statement-data';
 import { borrowerDisplayName } from '@/lib/format';
 import { logActivity } from '@/lib/activity';
+import ChangeEmailButton from '@/components/ChangeEmailButton';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -27,6 +28,7 @@ export default async function PortalPage() {
       <Logo size={40} />
       <span className="spacer" />
       <span className="muted" style={{ fontSize: 13 }}>{user?.email}</span>
+      <ChangeEmailButton userEmail={user?.email ?? ''} />
       <form action="/auth/signout" method="post" style={{ margin: 0 }}>
         <button className="btn secondary">Sign out</button>
       </form>

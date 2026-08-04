@@ -257,38 +257,48 @@ select.filter, input.field, select.field, textarea.field {
 
 /* ============================================================
    Borrower portal: loan tabs.
-   The selected tab and the statement below it form one shape -- the tab is
-   the folder pocket and the card is the page inside it. The seam is closed
-   by pulling the card up 1px so it covers the tab's bottom border.
+   The selected tab and the statement below it are one shape -- the tab is the
+   folder pocket, the card is the page inside it. Every tab bottom sits on the
+   card's top border line: unselected tabs paint that line in the card's border
+   colour so they read as closed, the selected tab paints it white so the seam
+   is open.
    ============================================================ */
 .loantabs {
-  display: flex; gap: 6px; flex-wrap: wrap;
-  padding: 0 4px; margin-bottom: 0;
+  display: flex; gap: 4px; flex-wrap: wrap; align-items: flex-end;
+  padding: 0;                 /* flush with the card's left edge */
+  margin: 0;
 }
 .loantab {
   display: flex; flex-direction: column; gap: 3px; text-align: left;
-  background: var(--pale);
-  /* same border colour as .card, so tab and card read as one piece of paper */
-  border: 1px solid #E4EAF3; border-bottom: none;
-  border-radius: 10px 10px 0 0; padding: 11px 20px 12px; cursor: pointer;
-  color: var(--muted); font-family: inherit; font-size: 14px;
-  transition: background .15s ease, color .15s ease;
+  background: #EAF0F7;
+  border: 1px solid #E4EAF3;
+  border-bottom: 1px solid #E4EAF3;   /* closed: continues the card's edge */
+  border-radius: 14px 14px 0 0;
+  padding: 10px 22px 11px;
+  cursor: pointer; font-family: inherit; font-size: 14px;
+  color: var(--muted);
+  position: relative; top: 1px; z-index: 1;
+  transition: background .15s ease, color .15s ease, padding .15s ease;
 }
-.loantab:hover { background: #F3F7FC; color: var(--navy); }
+.loantab:hover:not(.active) { background: #F1F5FA; color: var(--navy); }
+
 .loantab.active {
-  background: #fff; color: var(--navy);
-  /* sit 1px lower and paint a white bottom edge, which covers the card's top
-     border underneath -- that open seam is what makes it a folder pocket */
-  position: relative; top: 1px; z-index: 2;
-  border-bottom: 1px solid #fff;
-  padding-bottom: 12px;
+  background: #fff;
+  color: var(--navy);
+  border-bottom-color: #fff;          /* open: erases the card's top border */
+  padding: 15px 24px 12px;            /* taller, so the live tab stands up */
+  z-index: 3;
+  box-shadow: 0 -4px 14px rgba(4, 22, 42, .09);
 }
-.loantab-addr { font-weight: 700; }
-.loantab-meta { font-size: 12px; opacity: .75; font-variant-numeric: tabular-nums; }
+.loantab-addr { font-weight: 700; font-size: 14.5px; }
+.loantab-meta { font-size: 12px; opacity: .8; font-variant-numeric: tabular-nums; }
 
 /* the statement card, joined to the tab above it */
 .wrap-flush { padding-top: 0 !important; }
-.card-tabbed { border-top-left-radius: 0; border-top-right-radius: 0; }
+.card-tabbed {
+  border-top-left-radius: 0; border-top-right-radius: 0;
+  box-shadow: 0 6px 20px rgba(4, 22, 42, .09);
+}
 
 @media (prefers-reduced-motion: reduce) { .loantab { transition: none; } }
 

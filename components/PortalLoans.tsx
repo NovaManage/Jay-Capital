@@ -1,10 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import StatementView, { type StatementData, type StatementDraw, type PayInfo } from '@/components/StatementView';
-import { Modal, AlertDialog } from '@/components/Modal';
-import { changeMyEmail } from '@/lib/signup';
 import { money, shortAddress } from '@/lib/format';
 import type { PaymentRow, AllocationRow } from '@/lib/ledger';
 
@@ -26,16 +23,9 @@ export interface PortalLoan {
 export default function PortalLoans({
   loans, userId, userEmail,
 }: { loans: PortalLoan[]; userId: string; userEmail: string }) {
-  const router = useRouter();
   const key = `jcf:portal:lastLoan:${userId}`;
   const [active, setActive] = useState(0);
   const [ready, setReady] = useState(false);
-
-  const [emailOpen, setEmailOpen] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState('');
-  const [note, setNote] = useState<string | null>(null);
 
   // Restore after mount: reading storage during render would not match the
   // server-rendered markup.
@@ -59,41 +49,6 @@ export default function PortalLoans({
     } catch { /* ignore */ }
   }, [active, ready, loans, key]);
 
-  async function saveEmail() {
-    if (!newEmail.trim()) { setErr('Please enter an email address.'); return; }
-    setBusy(true); setErr('');
-    const res = await changeMyEmail(newEmail);
-    setBusy(false);
-    if (!res.ok) { setErr(res.error || 'Could not change your email.'); return; }
-    setEmailOpen(false);
-    setNote(res.message || 'Your email has been updated.');
-    router.refresh();
-  }
-
-  const emailControls = (
-    <>
-      <Modal open={emailOpen} onClose={() => !busy && setEmailOpen(false)} title="Change My Email" maxWidth={480}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <p className="muted" style={{ margin: 0 }}>
-            Your loans are matched to you by email. Changing it here re-checks for loans
-            registered to the new address. Signed in as <b>{userEmail}</b>.
-          </p>
-          <div className="field-wrap">
-            <label>New email</label>
-            <input className="field" type="email" value={newEmail}
-              onChange={e => setNewEmail(e.target.value)} placeholder="you@example.com" />
-          </div>
-          {err && <div className="alert error" style={{ margin: 0 }}>{err}</div>}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-            <button className="btn secondary" disabled={busy} onClick={() => setEmailOpen(false)}>Cancel</button>
-            <button className="btn" disabled={busy} onClick={saveEmail}>{busy ? 'Saving…' : 'Save email'}</button>
-          </div>
-        </div>
-      </Modal>
-      <AlertDialog open={!!note} title="Account updated" message={note || ''} tone="success" onClose={() => setNote(null)} />
-    </>
-  );
-
   if (loans.length === 0) {
     return (
       <>
@@ -107,16 +62,16 @@ export default function PortalLoans({
             registered under a different address, update it below — otherwise contact us
             and we&apos;ll get it sorted.
           </p>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
-            <button className="btn" onClick={() => { setErr(''); setNewEmail(''); setEmailOpen(true); }}>
-              Change my email
-            </button>
+          <p className="muted" style={{ marginTop: 16 }}>
+            Use <b>Change my email</b> at the top of the page to switch to the address
+            your loan is registered under.
+          </p>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
             <a className="btn secondary" style={{ textDecoration: 'none' }}
                href="mailto:Yossi@JayCapitalFunding.com?subject=Portal%20access%20help">Email us</a>
             <a className="btn secondary" style={{ textDecoration: 'none' }} href="tel:+18458280731">Call (845) 828-0731</a>
           </div>
         </div></div>
-        {emailControls}
       </>
     );
   }
@@ -127,12 +82,6 @@ export default function PortalLoans({
   return (
     <>
       <div className="wrap" style={{ maxWidth: 960, paddingBottom: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: multi ? 14 : 0 }}>
-          <button className="btn secondary" onClick={() => { setErr(''); setNewEmail(''); setEmailOpen(true); }}>
-            Change my email
-          </button>
-        </div>
-
         {multi && (
           <div className="loantabs" role="tablist" aria-label="Your loans">
             {loans.map((l, i) => (
@@ -162,8 +111,6 @@ export default function PortalLoans({
         payInfo={current.payInfo}
         flushTop={multi}
       />
-
-      {emailControls}
     </>
   );
 }
