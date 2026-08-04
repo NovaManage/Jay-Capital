@@ -21,3 +21,20 @@ export async function logActivity(
     /* analytics is best-effort */
   }
 }
+
+/**
+ * The signed-in user, if there is one, for attributing activity.
+ *
+ * Statement links authenticate by token and work signed-out, but a borrower
+ * who IS signed in should still be named on the activity feed rather than
+ * showing as anonymous. Purely for attribution -- it never affects access.
+ */
+export async function currentUserIdOrNull(): Promise<string | null> {
+  try {
+    const { serverClient } = await import('@/lib/supabase-server');
+    const { data: { user } } = await serverClient().auth.getUser();
+    return user?.id ?? null;
+  } catch {
+    return null;
+  }
+}

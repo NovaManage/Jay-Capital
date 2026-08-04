@@ -129,6 +129,13 @@ export default async function InsightsPage() {
     portal_view: 'Portal', statement_view: 'Statement link', pdf_download: 'PDF download',
   };
 
+  // Who did it. Only signed-in portal views carry a user; statement links and
+  // PDF downloads authenticate by token, so nobody is identified there --
+  // anyone holding the link could have opened it.
+  const accountById = new Map(
+    (profiles ?? []).map((p: any) => [p.id, { email: p.email as string, name: p.full_name as string | null, role: p.role as string }])
+  );
+
   return (
     <div className="wrap">
       <p style={{ marginBottom: 12 }}><Link href="/admin">&larr; Back to Dashboard</Link></p>
@@ -228,13 +235,31 @@ export default async function InsightsPage() {
         ) : (
           <div className="tablescroll">
             <table className="bordered">
-              <thead><tr><th>When</th><th>What</th><th>Loan</th><th>Borrower</th></tr></thead>
+              <thead><tr><th>When</th><th>Who</th><th>What</th><th>Loan</th><th>Borrower</th></tr></thead>
               <tbody>
                 {actList.slice(0, 25).map((a: any, i: number) => {
                   const l: any = a.loan_id ? byId.get(a.loan_id) : null;
                   return (
                     <tr key={i}>
                       <td>{new Date(a.occurred_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
+                      <td>
+                        {(() => {
+                          const acct = a.user_id ? accountById.get(a.user_id) : null;
+                          if (acct) {
+                            return (
+                              <>
+                                <div style={{ fontWeight: 600 }}>{acct.name || acct.email}</div>
+                                {acct.name && <div className="muted" style={{ fontSize: 12 }}>{acct.email}</div>}
+                                {acct.role !== 'borrower' && <span className={`badge ${acct.role}`}>{acct.role}</span>}
+                              </>
+                            );
+                          }
+                          if (a.user_id) {
+                            return <span className="muted">deleted account</span>;
+                          }
+                          return <span className="muted" title="Opened with a statement link, which needs no sign-in">Not signed in</span>;
+                        })()}
+                      </td>
                       <td>{kindLabel[a.kind] || a.kind}</td>
                       <td>{l ? <Link href={`/admin/loans/${l.loan_id}`}>{l.loan_number}</Link> : <span className="muted">—</span>}</td>
                       <td>{l ? l.borrower_name : <span className="muted">—</span>}</td>
