@@ -43,9 +43,9 @@ export function fromAddress(): string {
 export function brandShell(inner: string): string {
   return `<!doctype html><html><body style="margin:0;padding:24px;background:#F7F9FC;font-family:Arial,Helvetica,sans-serif;color:#333">
     <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #E4EAF3;border-radius:10px;padding:28px">
-      <img src="cid:${EMAIL_LOGO_CID}" alt="${BRAND.company}" width="300"
-           style="display:block;width:300px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none" />
-      <div style="height:2px;background:${GOLD};border-radius:2px;margin:16px 0 20px"></div>
+      <img src="cid:${EMAIL_LOGO_CID}" alt="${BRAND.company}" width="200"
+           style="display:block;width:200px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none" />
+      <div style="height:2px;background:${GOLD};border-radius:2px;margin:14px 0 20px"></div>
       ${inner}
       <div style="border-top:1px solid #E4EAF3;margin:22px 0 0;padding-top:14px;color:${MUTED};font-size:12px;line-height:1.7">
         <b style="color:${NAVY}">${BRAND.company}</b><br/>
