@@ -13,6 +13,7 @@ import AddDrawModal from '@/components/AddDrawModal';
 import AddBorrowerModal from '@/components/AddBorrowerModal';
 import SendPortalLinkModal from '@/components/SendPortalLinkModal';
 import { ConfirmDialog, AlertDialog } from '@/components/Modal';
+import LoanPager from '@/components/LoanPager';
 
 interface Summary {
   loan_id: string; loan_number: string; property: string; loan_amount: number;
@@ -25,11 +26,12 @@ interface Summary {
 interface DrawRow { id: string; draw_date: string; description: string; amount: number; interest_accrued: number | null; }
 
 export default function LoanDetail({
-  summary, draws, payments = [], allocations = [], canEdit, canSend,
+  summary, draws, payments = [], allocations = [], canEdit, canSend, fallbackOrder = [],
 }: {
   summary: Summary; draws: DrawRow[];
   payments?: PaymentRow[]; allocations?: AllocationRow[];
   canEdit: boolean; canSend: boolean;
+  fallbackOrder?: { id: string; label: string }[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -76,7 +78,13 @@ export default function LoanDetail({
 
   return (
     <div className="wrap">
-      <p style={{ marginBottom: 12 }}><Link href="/admin">&larr; Back to Dashboard</Link></p>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        gap: 12, flexWrap: 'wrap', marginBottom: 12,
+      }}>
+        <Link href="/admin">&larr; Back to Dashboard</Link>
+        <LoanPager currentId={summary.loan_id} fallbackOrder={fallbackOrder} />
+      </div>
 
       <div className="card" style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>

@@ -417,3 +417,20 @@ select.filter, input.field, select.field, textarea.field {
   .card { padding: 16px 13px; }
   .nav { gap: 8px; }
 }
+
+/* Contact band: details stack down the left, form on the right. The two used
+   to be a row of items with a button hanging off the bottom, which lined up
+   with nothing. */
+.lp-contact-aside { display: flex; flex-direction: column; gap: 22px; }
+.lp-contact-aside .lp-contact-item { gap: 5px; }
+.lp-contact-plain { color: rgba(255,255,255,.9); font-size: 15.5px; line-height: 1.5; }
+.lp-contact-hint {
+  margin: 4px 0 0; color: rgba(255,255,255,.66); font-size: 13.5px; line-height: 1.6;
+}
+/* a button that reads as a link, so it can sit inside a sentence */
+.lp-linkbtn {
+  background: none; border: none; padding: 0; margin: 0; cursor: pointer;
+  font: inherit; color: var(--brass-lt); text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lp-linkbtn:hover { color: #fff; }

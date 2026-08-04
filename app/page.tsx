@@ -173,22 +173,26 @@ export default function LandingPage() {
             If it is not a fit, we will say so on the first call.
           </p>
           <div className="lp-contact-grid">
-            <div>
-              <div className="lp-contact-row">
-                <div className="lp-contact-item">
-                  <span className="lbl">Phone</span>
-                  <a href={PHONE_HREF}>{PHONE}</a>
-                </div>
-                <div className="lp-contact-item">
-                  <span className="lbl">Email</span>
-                  <span style={{ fontSize: 16, wordBreak: 'break-all' }}>{EMAIL}</span>
-                </div>
+            <div className="lp-contact-aside">
+              <div className="lp-contact-item">
+                <span className="lbl">Call</span>
+                <a href={PHONE_HREF}>{PHONE}</a>
               </div>
-              <div style={{ marginTop: 22 }}>
-                <EmailUs className="lp-btn ghost lp-btn-onnavy" label="Open in my email app" subject="Loan enquiry" />
+              <div className="lp-contact-item">
+                <span className="lbl">Email</span>
+                <a href="#contact-form">{EMAIL}</a>
               </div>
+              <div className="lp-contact-item">
+                <span className="lbl">Office</span>
+                <span className="lp-contact-plain">33 Downtown Dr<br />Monsey, NY 10952</span>
+              </div>
+              <p className="lp-contact-hint">
+                Prefer your own email client? <EmailUs className="lp-linkbtn" label="Open it here" subject="Loan enquiry" />
+              </p>
             </div>
-            <ContactForm />
+            <div id="contact-form" style={{ scrollMarginTop: 90 }}>
+              <ContactForm />
+            </div>
           </div>
         </div>
       </section>

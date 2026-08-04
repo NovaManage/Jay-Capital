@@ -10,11 +10,12 @@ import * as React from 'react';
 const INK = '#04162A';     // wordmark navy from the branding sheet
 const GOLD = '#C0954A';    // FUNDING gold from the branding sheet
 
-export function LogoMark({ size = 40 }: { size?: number }) {
-  // artwork is taller than it is wide (1168 x 1728)
+export function LogoMark({ size = 40, tone = 'navy' }: { size?: number; tone?: 'navy' | 'light' }) {
+  // artwork is taller than it is wide (1168 x 1728). On dark grounds the
+  // white cut from the brand kit reads better than the gold gradient.
   return (
     <img
-      src="/logo-mark.svg"
+      src={tone === 'light' ? '/logo-mark-white.svg' : '/logo-mark.svg'}
       alt=""
       aria-hidden="true"
       width={Math.round(size * (1168 / 1728))}
@@ -62,12 +63,12 @@ export default function Logo({
   variant?: 'horizontal' | 'stacked';
   showWordmark?: boolean;
 }) {
-  if (!showWordmark) return <LogoMark size={size} />;
+  if (!showWordmark) return <LogoMark size={size} tone={tone} />;
 
   if (variant === 'stacked') {
     return (
       <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: size * 0.34 }}>
-        <LogoMark size={size * 1.5} />
+        <LogoMark size={size * 1.5} tone={tone} />
         <Wordmark size={size * 0.62} tone={tone} />
       </span>
     );
@@ -75,7 +76,7 @@ export default function Logo({
 
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: size * 0.42 }}>
-      <LogoMark size={size * 1.15} />
+      <LogoMark size={size * 1.15} tone={tone} />
       <span style={{
         width: 1, alignSelf: 'stretch',
         background: tone === 'light' ? 'rgba(255,255,255,.28)' : 'rgba(4,22,42,.18)',

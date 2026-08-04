@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { money, pct, fmtDate, rateFraction, shortAddress } from '@/lib/format';
 
@@ -26,6 +26,10 @@ export interface LoanRow {
 
 type SortKey = keyof LoanRow;
 
+/** Dashboard view state, and the loan order the loan page pages through. */
+export const VIEW_KEY = 'jcf:admin:portfolioView';
+export const ORDER_KEY = 'jcf:admin:loanOrder';
+
 const COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
   { key: 'loan_number',      label: 'Loan ID' },
   { key: 'borrower_name',    label: 'Borrower' },
@@ -50,6 +54,34 @@ export default function PortfolioTable({ loans, canEdit }: { loans: LoanRow[]; c
   const [status, setStatus] = useState('active');
   const [sortKey, setSortKey] = useState<SortKey | null>('loan_number');
   const [sortDir, setSortDir] = useState<1 | -1>(1);
+  const [restored, setRestored] = useState(false);
+
+  // Restore the last search, filters and sort. Opening a loan and coming back
+  // used to drop you on the defaults, so a filter had to be re-set every time.
+  // Read after mount, never during render -- the server has no localStorage,
+  // and reading it during render would not match the server-rendered markup.
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(VIEW_KEY);
+      if (raw) {
+        const v = JSON.parse(raw);
+        if (typeof v.q === 'string') setQ(v.q);
+        if (typeof v.lender === 'string') setLender(v.lender);
+        if (typeof v.rateBand === 'string') setRateBand(v.rateBand);
+        if (typeof v.status === 'string') setStatus(v.status);
+        if (v.sortKey === null || typeof v.sortKey === 'string') setSortKey(v.sortKey);
+        if (v.sortDir === 1 || v.sortDir === -1) setSortDir(v.sortDir);
+      }
+    } catch { /* corrupt or unavailable: defaults are fine */ }
+    setRestored(true);
+  }, []);
+
+  useEffect(() => {
+    if (!restored) return;   // don't overwrite saved state with the defaults
+    try {
+      window.localStorage.setItem(VIEW_KEY, JSON.stringify({ q, lender, rateBand, status, sortKey, sortDir }));
+    } catch { /* ignore */ }
+  }, [restored, q, lender, rateBand, status, sortKey, sortDir]);
 
   const lenders = useMemo(
     () => Array.from(new Set(loans.map(l => l.lender_name).filter(Boolean))).sort() as string[],
@@ -103,6 +135,15 @@ export default function PortfolioTable({ loans, canEdit }: { loans: LoanRow[]; c
       deployed, totalDraw,
     };
   }, [view]);
+
+  // Publish the order actually on screen, so Prev/Next on a loan follows the
+  // list the admin is looking at rather than some unrelated global order.
+  useEffect(() => {
+    if (!restored) return;
+    try {
+      window.localStorage.setItem(ORDER_KEY, JSON.stringify(view.map(l => l.loan_id)));
+    } catch { /* ignore */ }
+  }, [restored, view]);
 
   function toggleSort(k: SortKey) {
     if (sortKey === k) setSortDir(d => (d === 1 ? -1 : 1));
@@ -165,6 +206,14 @@ export default function PortfolioTable({ loans, canEdit }: { loans: LoanRow[]; c
             <option value="">All statuses</option>
           </select>
           <button className="btn" onClick={exportCSV}>Export CSV</button>
+          {(q || lender || rateBand || status !== 'active') && (
+            <button
+              className="btn secondary"
+              onClick={() => { setQ(''); setLender(''); setRateBand(''); setStatus('active'); }}
+            >
+              Reset filters
+            </button>
+          )}
         </div>
 
         <div className="tablescroll">
