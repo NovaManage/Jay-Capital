@@ -255,24 +255,43 @@ select.filter, input.field, select.field, textarea.field {
   .lp-card:hover, .lp-btn:hover { transform: none; }
 }
 
-/* Borrower portal: loan tabs (only rendered when there is more than one) */
+/* ============================================================
+   Borrower portal: loan tabs.
+   The selected tab and the statement below it form one shape -- the tab is
+   the folder pocket and the card is the page inside it. The seam is closed
+   by pulling the card up 1px so it covers the tab's bottom border.
+   ============================================================ */
 .loantabs {
-  display: flex; gap: 8px; flex-wrap: wrap;
-  border-bottom: 1px solid var(--border); padding-bottom: 0; margin-bottom: 4px;
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 0 4px; margin-bottom: 0;
 }
 .loantab {
   display: flex; flex-direction: column; gap: 3px; text-align: left;
-  background: transparent; border: 1px solid transparent; border-bottom: none;
-  border-radius: 10px 10px 0 0; padding: 11px 18px 12px; cursor: pointer;
+  background: var(--pale);
+  /* same border colour as .card, so tab and card read as one piece of paper */
+  border: 1px solid #E4EAF3; border-bottom: none;
+  border-radius: 10px 10px 0 0; padding: 11px 20px 12px; cursor: pointer;
   color: var(--muted); font-family: inherit; font-size: 14px;
   transition: background .15s ease, color .15s ease;
 }
-.loantab:hover { background: var(--pale); color: var(--navy); }
+.loantab:hover { background: #F3F7FC; color: var(--navy); }
 .loantab.active {
-  background: #fff; border-color: var(--border); color: var(--navy);
-  box-shadow: 0 -2px 0 var(--brass) inset, 0 -3px 0 var(--brass);
-  margin-bottom: -1px;
+  background: #fff; color: var(--navy);
+  /* sit 1px lower and paint a white bottom edge, which covers the card's top
+     border underneath -- that open seam is what makes it a folder pocket */
+  position: relative; top: 1px; z-index: 2;
+  border-bottom: 1px solid #fff;
+  padding-bottom: 12px;
 }
 .loantab-addr { font-weight: 700; }
-.loantab-meta { font-size: 12px; opacity: .8; font-variant-numeric: tabular-nums; }
+.loantab-meta { font-size: 12px; opacity: .75; font-variant-numeric: tabular-nums; }
+
+/* the statement card, joined to the tab above it */
+.wrap-flush { padding-top: 0 !important; }
+.card-tabbed { border-top-left-radius: 0; border-top-right-radius: 0; }
+
 @media (prefers-reduced-motion: reduce) { .loantab { transition: none; } }
+
+/* Borrower header: no menu to fill it, so the logo carries the brand -- give
+   it room and a little more weight than the admin bar needs. */
+.nav-borrower { padding: 18px 24px; background: #fff; }

@@ -18,8 +18,8 @@ export default async function StatementPage({ params }: { params: { token: strin
   if (!loan) {
     return (
       <>
-        <nav className="nav">
-          <a href="/" style={{ textDecoration: 'none', padding: 0 }}><Logo size={26} /></a>
+        <nav className="nav nav-borrower">
+          <a href="/" style={{ textDecoration: 'none', padding: 0 }}><Logo size={40} /></a>
         </nav>
         <div className="wrap" style={{ maxWidth: 640 }}>
           <div className="card">
@@ -44,8 +44,8 @@ export default async function StatementPage({ params }: { params: { token: strin
     <>
       <PortalTitle name={borrowerDisplayName(loan)} />
       <LiveRefresh />
-      <nav className="nav">
-        <a href="/" style={{ textDecoration: 'none', padding: 0 }}><Logo size={26} /></a>
+      <nav className="nav nav-borrower">
+        <a href="/" style={{ textDecoration: 'none', padding: 0 }}><Logo size={40} /></a>
         <span className="spacer" />
         <a className="muted" style={{ fontSize: 13, textDecoration: 'none' }} href="mailto:Yossi@JayCapitalFunding.com?subject=Statement%20question">
           Yossi@JayCapitalFunding.com

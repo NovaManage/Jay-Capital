@@ -122,11 +122,18 @@ export default function PortalLoans({
   }
 
   const current = loans[active] ?? loans[0];
+  const multi = loans.length > 1;
 
   return (
     <>
-      {loans.length > 1 && (
-        <div className="wrap" style={{ maxWidth: 960, paddingBottom: 0 }}>
+      <div className="wrap" style={{ maxWidth: 960, paddingBottom: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: multi ? 14 : 0 }}>
+          <button className="btn secondary" onClick={() => { setErr(''); setNewEmail(''); setEmailOpen(true); }}>
+            Change my email
+          </button>
+        </div>
+
+        {multi && (
           <div className="loantabs" role="tablist" aria-label="Your loans">
             {loans.map((l, i) => (
               <button
@@ -143,8 +150,8 @@ export default function PortalLoans({
               </button>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <StatementView
         key={current.loan.loan_id}
@@ -153,13 +160,8 @@ export default function PortalLoans({
         payments={current.payments}
         allocations={current.allocations}
         payInfo={current.payInfo}
+        flushTop={multi}
       />
-
-      <div className="wrap" style={{ maxWidth: 960, paddingTop: 0 }}>
-        <button className="btn secondary" onClick={() => { setErr(''); setNewEmail(''); setEmailOpen(true); }}>
-          Change my email
-        </button>
-      </div>
 
       {emailControls}
     </>

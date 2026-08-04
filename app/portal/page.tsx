@@ -23,8 +23,8 @@ export default async function PortalPage() {
   const borrowerName = list.length ? borrowerDisplayName(list[0]) : '';
 
   const Nav = (
-    <nav className="nav">
-      <Logo size={26} />
+    <nav className="nav nav-borrower">
+      <Logo size={40} />
       <span className="spacer" />
       <span className="muted" style={{ fontSize: 13 }}>{user?.email}</span>
       <form action="/auth/signout" method="post" style={{ margin: 0 }}>

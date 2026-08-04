@@ -20,11 +20,13 @@ export interface StatementDraw { draw_date: string; description: string; amount:
 export interface PayInfo { method: string | null; instructions: string | null }
 
 export default function StatementView({
-  loan, draws, payments = [], allocations = [], payInfo, allowNavigate = true,
+  loan, draws, payments = [], allocations = [], payInfo, allowNavigate = true, flushTop = false,
 }: {
   loan: StatementData; draws: StatementDraw[];
   payments?: PaymentRow[]; allocations?: AllocationRow[];
   payInfo?: PayInfo | null; allowNavigate?: boolean;
+  /** Sit flush under the loan tab strip, as the open pocket of a folder. */
+  flushTop?: boolean;
 }) {
   const months = statementMonths(loan.closing_date);
   // Default to the statement for the month now in progress: this month's bill
@@ -47,8 +49,8 @@ export default function StatementView({
   const go = (delta: number) => setAsOf(cur => clampMonth(firstOfMonth(cur, delta), loan.closing_date));
 
   return (
-    <div className="wrap" style={{ maxWidth: 960 }}>
-      <div className="card">
+    <div className={`wrap${flushTop ? ' wrap-flush' : ''}`} style={{ maxWidth: 960 }}>
+      <div className={`card${flushTop ? ' card-tabbed' : ''}`}>
         <h1 className="title">Loan Statement</h1>
         <div className="rule" />
 
