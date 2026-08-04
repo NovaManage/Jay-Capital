@@ -4,6 +4,8 @@ import { run } from '@/lib/result';
 import { revalidatePath } from 'next/cache';
 import { serverClient, serviceClient } from '@/lib/supabase-server';
 import { syncBorrowerLinksForEmail } from '@/lib/borrower-links';
+import { randomBytes } from 'crypto';
+import { sendMail, brandShell, button, rawLink } from '@/lib/mailer';
 
 async function requireAdmin() {
   const supabase = serverClient();
@@ -617,6 +619,54 @@ export async function deleteUser(userId: string) {
 }
 
 /**
+ * Create a user and email them a link to set their own password, entirely
+ * over our SMTP.
+ *
+ * Replaces auth.admin.inviteUserByEmail, which sends through Supabase's
+ * mailer -- different sender, no branding, and it spends the Supabase quota.
+ * generateLink only RETURNS a link, so we create the account with an
+ * unguessable throwaway password and mail the recovery link ourselves.
+ */
+async function createUserAndEmailInvite(
+  svc: any, email: string, fullName: string, site: string, kind: 'team' | 'borrower',
+): Promise<string> {
+  const throwaway = randomBytes(24).toString('base64url');
+  const { data, error } = await svc.auth.admin.createUser({
+    email, password: throwaway, email_confirm: true,
+    user_metadata: { full_name: fullName || null },
+  });
+  if (error) throw new Error(error.message);
+  const userId: string | undefined = data?.user?.id;
+  if (!userId) throw new Error('The account could not be created.');
+
+  const { data: link, error: lErr } = await svc.auth.admin.generateLink({
+    type: 'recovery', email,
+    options: { redirectTo: site ? `${site}/auth/callback?next=/auth/set-password` : undefined },
+  });
+  if (lErr) throw new Error(lErr.message);
+  const action = (link as any)?.properties?.action_link;
+  if (!action) throw new Error('Could not generate the invitation link.');
+
+  const intro = kind === 'borrower'
+    ? 'An account has been created for you on the Jay Capital Funding borrower portal, where you can view your loan statements and construction draws.'
+    : 'You have been given access to the Jay Capital Funding portal.';
+
+  await sendMail({
+    to: email,
+    subject: 'Set up your Jay Capital Funding account',
+    html: brandShell(
+      `<p style="margin:0 0 14px">Hi ${fullName || 'there'},</p>
+       <p style="margin:0 0 14px">${intro} Choose a password to finish setting up your login.</p>
+       ${button(action, 'Set my password')}
+       ${rawLink(action)}
+       <p style="margin:14px 0 0;color:#6B7A90;font-size:13px">If you weren&rsquo;t expecting this, you can ignore this email.</p>`
+    ),
+  });
+
+  return userId;
+}
+
+/**
  * Add an ADMIN or STAFF user. Two modes:
  *  - invite: Supabase emails them a set-password link
  *  - manual: create with a temp password; optionally email the credentials
@@ -633,12 +683,7 @@ export async function inviteAdminUser(opts: {
     let message = '';
 
     if (opts.mode === 'invite') {
-      const { data, error } = await svc.auth.admin.inviteUserByEmail(opts.email, {
-        redirectTo: site ? `${site}/auth/callback?next=/auth/set-password` : undefined,
-        data: { full_name: opts.fullName },
-      });
-      if (error) throw new Error(error.message);
-      userId = data?.user?.id;
+      userId = await createUserAndEmailInvite(svc, opts.email, opts.fullName, site, 'team');
       message = `Invitation emailed to ${opts.email}.`;
     } else {
       const { data, error } = await svc.auth.admin.createUser({
@@ -690,12 +735,7 @@ export async function createBorrowerUser(opts: {
       reusedExisting = true;
       message = `${opts.email} already had an account, so this loan was connected to it.`;
     } else if (opts.mode === 'invite') {
-      const { data, error } = await svc.auth.admin.inviteUserByEmail(opts.email, {
-        redirectTo: site ? `${site}/auth/callback?next=/auth/set-password` : undefined,
-        data: { full_name: opts.fullName },
-      });
-      if (error) throw new Error(error.message);
-      userId = data?.user?.id;
+      userId = await createUserAndEmailInvite(svc, opts.email, opts.fullName, site, 'borrower');
       message = `Invitation emailed to ${opts.email}.`;
     } else {
       const { data, error } = await svc.auth.admin.createUser({
@@ -793,45 +833,33 @@ export async function claimPortalAccount(token: string, password: string) {
 
 /** Email a password-reset link. */
 async function emailResetLink(email: string, link: string) {
-  const nodemailer = (await import('nodemailer')).default;
-  const host = process.env.SMTP_HOST, user = process.env.SMTP_USER, pass = process.env.SMTP_PASS;
-  const port = Number(process.env.SMTP_PORT || 587);
-  if (!host || !user || !pass) throw new Error('SMTP is not configured (SMTP_HOST, SMTP_USER, SMTP_PASS).');
-  const t = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } });
-  const from = process.env.SMTP_FROM || user;
-  const navy = '#1F3864', muted = '#6B7A90';
-  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#F7F9FC;font-family:Arial,Helvetica,sans-serif;color:#333">
-    <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #E4EAF3;border-radius:10px;padding:28px">
-      <div style="color:${navy};font-weight:800;letter-spacing:.04em;font-size:18px;margin-bottom:4px">JAY CAPITAL</div>
-      <div style="height:3px;background:${navy};border-radius:2px;margin:8px 0 20px"></div>
-      <p style="margin:0 0 14px">A password reset was requested for your Jay Capital account.</p>
-      <p style="margin:0 0 18px"><a href="${link}" style="background:${navy};color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;display:inline-block;font-weight:600">Set a new password</a></p>
-      <p style="margin:0 0 6px;color:${muted};font-size:12px;word-break:break-all">Or paste this link into your browser:<br/>${link}</p>
-      <p style="margin:16px 0 0;color:${muted};font-size:13px">If you did not expect this, you can ignore this email.</p>
-    </div></body></html>`;
-  await t.sendMail({ from: `Jay Capital <${from}>`, to: email, replyTo: from, subject: 'Reset your Jay Capital password', html });
+  await sendMail({
+    to: email,
+    subject: 'Reset your Jay Capital Funding password',
+    html: brandShell(
+      `<p style="margin:0 0 14px">A password reset was requested for your Jay Capital Funding account.</p>
+       ${button(link, 'Set a new password')}
+       ${rawLink(link)}
+       <p style="margin:14px 0 0;color:#6B7A90;font-size:13px">If you did not request this, you can ignore this email.</p>`
+    ),
+  });
 }
 
 /** Shared: email a newly-created user their temporary login credentials. */
 async function emailCredentials(email: string, fullName: string, tempPassword: string, site: string) {
-  const nodemailer = (await import('nodemailer')).default;
-  const host = process.env.SMTP_HOST, user = process.env.SMTP_USER, pass = process.env.SMTP_PASS;
-  const port = Number(process.env.SMTP_PORT || 587);
-  if (!host || !user || !pass) throw new Error('SMTP is not configured (SMTP_HOST, SMTP_USER, SMTP_PASS).');
-  const t = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } });
-  const from = process.env.SMTP_FROM || user;
-  const loginUrl = site || '';
-  const navy = '#1F3864', muted = '#6B7A90';
-  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#F7F9FC;font-family:Arial,Helvetica,sans-serif;color:#333">
-    <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #E4EAF3;border-radius:10px;padding:28px">
-      <div style="color:${navy};font-weight:800;letter-spacing:.04em;font-size:18px;margin-bottom:4px">JAY CAPITAL</div>
-      <div style="height:3px;background:${navy};border-radius:2px;margin:8px 0 20px"></div>
-      <p style="margin:0 0 14px">Hi ${fullName || 'there'},</p>
-      <p style="margin:0 0 14px">An account has been created for you on the Jay Capital portal. Here are your temporary login details:</p>
-      <table style="margin:0 0 16px"><tr><td style="padding:4px 12px 4px 0;color:${muted}">Email</td><td style="font-weight:700">${email}</td></tr>
-      <tr><td style="padding:4px 12px 4px 0;color:${muted}">Temporary password</td><td style="font-weight:700">${tempPassword}</td></tr></table>
-      ${loginUrl ? `<p style="margin:0 0 14px"><a href="${loginUrl}/login" style="background:${navy};color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block">Sign in</a></p>` : ''}
-      <p style="margin:0 0 14px;color:${muted};font-size:13px">Please sign in and change your password. If you have any questions, just reply to this email.</p>
-    </div></body></html>`;
-  await t.sendMail({ from: `Jay Capital <${from}>`, to: email, replyTo: from, subject: 'Your Jay Capital login', html });
+  const muted = '#6B7A90';
+  await sendMail({
+    to: email,
+    subject: 'Your Jay Capital Funding login',
+    html: brandShell(
+      `<p style="margin:0 0 14px">Hi ${fullName || 'there'},</p>
+       <p style="margin:0 0 14px">An account has been created for you on the Jay Capital Funding portal. Here are your temporary login details:</p>
+       <table style="margin:0 0 16px">
+         <tr><td style="padding:4px 12px 4px 0;color:${muted}">Email</td><td style="font-weight:700">${email}</td></tr>
+         <tr><td style="padding:4px 12px 4px 0;color:${muted}">Temporary password</td><td style="font-weight:700">${tempPassword}</td></tr>
+       </table>
+       ${site ? button(`${site}/login`, 'Sign in') : ''}
+       <p style="margin:0;color:${muted};font-size:13px">Please sign in and change your password. If you have any questions, just reply to this email.</p>`
+    ),
+  });
 }

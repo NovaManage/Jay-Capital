@@ -1,8 +1,8 @@
 'use server';
 
 import { run } from '@/lib/result';
-import nodemailer from 'nodemailer';
 import { serverClient, serviceClient } from '@/lib/supabase-server';
+import { sendMail } from '@/lib/mailer';
 import { statementPDF } from '@/lib/statement-pdf';
 import { statementHTML } from '@/lib/statement-html';
 import { firstOfMonth, monthName, money, fmtDate, borrowerDisplayName } from '@/lib/format';
@@ -17,15 +17,6 @@ async function requireStaffOrAdmin() {
   const { data: profile } = await supabase.from('profiles').select('role, email, full_name').eq('id', user.id).single();
   if (!profile || !['admin', 'staff'].includes(profile.role)) throw new Error('Staff or admin only');
   return { supabase, profile };
-}
-
-function transport() {
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || 587);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  if (!host || !user || !pass) throw new Error('SMTP is not configured (SMTP_HOST, SMTP_USER, SMTP_PASS).');
-  return nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } });
 }
 
 /**
@@ -95,12 +86,9 @@ export async function emailStatement(loanId: string, months: string[]) {
         <p style="margin:18px 0 0;color:${muted};font-size:13px">Thank you,<br/>${profile.full_name || 'Jay Capital'}</p>
       </div></body></html>`;
 
-    const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER!;
-    const t = transport();
-    await t.sendMail({
-      from: `Jay Capital <${fromAddress}>`,
+    await sendMail({
       to: loan.borrower_email,
-      replyTo: profile.email,
+      replyTo: profile.email,      // borrower replies land with whoever sent it
       subject,
       html: body,
       attachments,
@@ -146,13 +134,10 @@ export async function sendPortalWelcome(loanId: string, toEmail: string) {
         <p style="margin:16px 0 0;color:${muted};font-size:13px">Questions? Just reply to this email.<br/>${profile.full_name || 'Jay Capital'}</p>
       </div></body></html>`;
 
-    const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER!;
-    const t = transport();
-    await t.sendMail({
-      from: `Jay Capital <${fromAddress}>`,
+    await sendMail({
       to: toEmail,
       replyTo: profile.email,
-      subject: 'Welcome to your Jay Capital portal',
+      subject: 'Welcome to your Jay Capital Funding portal',
       html,
     });
     return { ok: true, to: toEmail };

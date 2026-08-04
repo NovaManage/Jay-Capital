@@ -1,9 +1,9 @@
 'use server';
 
 import { randomBytes } from 'crypto';
-import nodemailer from 'nodemailer';
 import { run } from '@/lib/result';
 import { serviceClient } from '@/lib/supabase-server';
+import { sendMail, brandShell, button, rawLink } from '@/lib/mailer';
 import { syncBorrowerLinksForEmail, releaseMismatchedLinks } from '@/lib/borrower-links';
 
 /**
@@ -22,29 +22,6 @@ import { syncBorrowerLinksForEmail, releaseMismatchedLinks } from '@/lib/borrowe
  */
 
 const TOKEN_TTL_MIN = 60;
-
-function transport() {
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || 587);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  if (!host || !user || !pass) throw new Error('Email is not configured yet. Please contact Jay Capital Funding.');
-  return nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } });
-}
-
-function shell(inner: string) {
-  const navy = '#04162A', gold = '#C0954A', muted = '#6B7A90';
-  return `<!doctype html><html><body style="margin:0;padding:24px;background:#F7F9FC;font-family:Arial,Helvetica,sans-serif;color:#333">
-    <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #E4EAF3;border-radius:10px;padding:28px">
-      <div style="color:${navy};font-weight:800;letter-spacing:.12em;font-size:17px">JAY CAPITAL</div>
-      <div style="color:${gold};font-weight:700;letter-spacing:.3em;font-size:9px;margin-top:2px">FUNDING</div>
-      <div style="height:2px;background:${gold};border-radius:2px;margin:12px 0 20px"></div>
-      ${inner}
-      <p style="margin:18px 0 0;color:${muted};font-size:12px">
-        Jay Capital Funding · 33 Downtown Dr, Monsey, NY 10952 · (845) 828-0731
-      </p>
-    </div></body></html>`;
-}
 
 async function issueToken(email: string, purpose: string): Promise<string> {
   const svc = serviceClient();
@@ -77,12 +54,11 @@ export async function requestPortalSignup(emailRaw: string) {
     const { data: existing } = await svc.from('profiles').select('id').ilike('email', email).maybeSingle();
 
     if (existing) {
-      const t = transport();
-      const from = process.env.SMTP_FROM || process.env.SMTP_USER!;
-      await t.sendMail({
-        from: `Jay Capital Funding <${from}>`, to: email, replyTo: from,
+      await sendMail({
+
+        to: email,
         subject: 'Your Jay Capital portal account',
-        html: shell(`<p style="margin:0 0 14px">You already have a Jay Capital portal account for <b>${email}</b>.</p>
+        html: brandShell(`<p style="margin:0 0 14px">You already have a Jay Capital portal account for <b>${email}</b>.</p>
           <p style="margin:0 0 18px"><a href="${site}/login" style="background:#04162A;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;display:inline-block;font-weight:600">Sign in</a></p>
           <p style="margin:0;color:#6B7A90;font-size:13px">If you have forgotten your password, use “Forgot password” on the sign-in page.</p>`),
       });
@@ -92,12 +68,12 @@ export async function requestPortalSignup(emailRaw: string) {
     const token = await issueToken(email, 'signup');
     const link = `${site}/signup/${token}`;
 
-    const t = transport();
-    const from = process.env.SMTP_FROM || process.env.SMTP_USER!;
-    await t.sendMail({
-      from: `Jay Capital Funding <${from}>`, to: email, replyTo: from,
+    await sendMail({
+
+
+      to: email,
       subject: 'Set up your Jay Capital portal account',
-      html: shell(`<p style="margin:0 0 14px">Hi,</p>
+      html: brandShell(`<p style="margin:0 0 14px">Hi,</p>
         <p style="margin:0 0 14px">Use the button below to choose a password and finish setting up your Jay Capital borrower portal.</p>
         <p style="margin:0 0 18px"><a href="${link}" style="background:#04162A;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;display:inline-block;font-weight:600">Set my password</a></p>
         <p style="margin:0 0 6px;color:#6B7A90;font-size:12px;word-break:break-all">Or paste this into your browser:<br/>${link}</p>
@@ -250,12 +226,11 @@ export async function requestPasswordReset(emailRaw: string) {
       if (!error) {
         const link = (data as any)?.properties?.action_link;
         if (link) {
-          const t = transport();
-          const from = process.env.SMTP_FROM || process.env.SMTP_USER!;
-          await t.sendMail({
-            from: `Jay Capital Funding <${from}>`, to: email, replyTo: from,
+          await sendMail({
+
+            to: email,
             subject: 'Reset your Jay Capital password',
-            html: shell(`<p style="margin:0 0 14px">A password reset was requested for your Jay Capital portal account.</p>
+            html: brandShell(`<p style="margin:0 0 14px">A password reset was requested for your Jay Capital portal account.</p>
               <p style="margin:0 0 18px"><a href="${link}" style="background:#04162A;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;display:inline-block;font-weight:600">Set a new password</a></p>
               <p style="margin:0 0 6px;color:#6B7A90;font-size:12px;word-break:break-all">Or paste this into your browser:<br/>${link}</p>
               <p style="margin:14px 0 0;color:#6B7A90;font-size:13px">If you didn’t request this, you can ignore this email.</p>`),

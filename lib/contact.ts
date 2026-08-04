@@ -1,7 +1,7 @@
 'use server';
 
-import nodemailer from 'nodemailer';
 import { run } from '@/lib/result';
+import { sendMail } from '@/lib/mailer';
 
 /**
  * Public enquiry form.
@@ -38,16 +38,6 @@ export async function sendEnquiry(input: {
     if (message.length < 5) throw new Error('Please tell us a little about what you need.');
     if (message.length > 5000) throw new Error('That message is too long. Please shorten it a little.');
 
-    const host = process.env.SMTP_HOST;
-    const port = Number(process.env.SMTP_PORT || 587);
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
-    if (!host || !user || !pass) {
-      throw new Error(`Our contact form is temporarily unavailable. Please call (845) 828-0731 or email ${CONTACT_TO}.`);
-    }
-
-    const t = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } });
-    const from = process.env.SMTP_FROM || user;
     const navy = '#04162A', gold = '#C0954A', muted = '#6B7A90';
     const esc = (v: string) => v.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] as string));
 
@@ -55,8 +45,7 @@ export async function sendEnquiry(input: {
       `<tr><td style="padding:6px 14px 6px 0;color:${muted};white-space:nowrap">${k}</td>` +
       `<td style="padding:6px 0;font-weight:700">${esc(v)}</td></tr>`;
 
-    await t.sendMail({
-      from: `Jay Capital Funding <${from}>`,
+    await sendMail({
       to: CONTACT_TO,
       // so hitting reply in the inbox goes straight back to the enquirer
       replyTo: `${name} <${email}>`,
