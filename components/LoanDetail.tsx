@@ -57,6 +57,10 @@ export default function LoanDetail({
   const pdfHref = `/api/statement-pdf/${summary.access_token}?month=${stmtDate}`;
   const go = (delta: number) => setStmtDate(cur => clampMonth(firstOfMonth(cur, delta), summary.closing_date));
 
+  // months is newest-first; disable each arrow once there is nowhere to go.
+  const atNewest = stmtDate >= months[0];
+  const atOldest = stmtDate <= months[months.length - 1];
+
   async function doDeleteLoan() {
     setConfirmDeleteLoan(false);
     setBusy(true);
@@ -156,11 +160,17 @@ export default function LoanDetail({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
           <h2 style={{ color: 'var(--navy)', margin: 0 }}>Statement Preview</h2>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className="btn secondary" onClick={() => go(-1)}>&larr; Prev</button>
+            <button className="btn secondary" onClick={() => go(-1)} disabled={atOldest}
+              title={atOldest ? 'This is the first statement for this loan' : undefined}>
+              &larr; Prev
+            </button>
             <select className="filter" value={stmtDate} onChange={e => setStmtDate(e.target.value)}>
               {months.map(m => <option key={m} value={m}>{monthName(m)}</option>)}
             </select>
-            <button className="btn secondary" onClick={() => go(1)}>Next &rarr;</button>
+            <button className="btn secondary" onClick={() => go(1)} disabled={atNewest}
+              title={atNewest ? 'This is the most recent statement' : undefined}>
+              Next &rarr;
+            </button>
             <a className="btn" href={pdfHref} target="_blank" rel="noopener">Download PDF</a>
           </div>
         </div>

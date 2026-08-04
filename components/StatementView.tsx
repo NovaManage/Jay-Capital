@@ -48,6 +48,12 @@ export default function StatementView({
 
   const go = (delta: number) => setAsOf(cur => clampMonth(firstOfMonth(cur, delta), loan.closing_date));
 
+  // statementMonths is newest-first, so [0] is the latest month available and
+  // the last entry is the earliest. Grey the arrows out at each end rather
+  // than leaving a live button that silently does nothing.
+  const atNewest = asOf >= months[0];
+  const atOldest = asOf <= months[months.length - 1];
+
   return (
     <div className={`wrap${flushTop ? ' wrap-flush' : ''}`} style={{ maxWidth: 960 }}>
       <div className={`card${flushTop ? ' card-tabbed' : ''}`}>
@@ -57,11 +63,17 @@ export default function StatementView({
         {allowNavigate && (
           <div className="toolbar" style={{ justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button className="btn secondary" onClick={() => go(-1)}>&larr; Prev</button>
+              <button className="btn secondary" onClick={() => go(-1)} disabled={atOldest}
+                title={atOldest ? 'This is the first statement for this loan' : undefined}>
+                &larr; Prev
+              </button>
               <select className="filter" value={asOf} onChange={e => setAsOf(e.target.value)}>
                 {months.map(m => <option key={m} value={m}>{monthName(m)}</option>)}
               </select>
-              <button className="btn secondary" onClick={() => go(1)}>Next &rarr;</button>
+              <button className="btn secondary" onClick={() => go(1)} disabled={atNewest}
+                title={atNewest ? 'This is the most recent statement' : undefined}>
+                Next &rarr;
+              </button>
             </div>
             <a className="btn" href={pdfHref} target="_blank" rel="noopener">Download PDF</a>
           </div>
