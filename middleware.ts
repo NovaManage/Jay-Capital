@@ -34,9 +34,9 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (path === '/login' && user) {
+  if ((path === '/login' || path === '/signup') && user) {
     const url = req.nextUrl.clone();
-    url.pathname = '/admin';
+    url.pathname = '/go';
     url.searchParams.delete('next');
     return NextResponse.redirect(url);
   }
@@ -44,4 +44,6 @@ export async function middleware(req: NextRequest) {
   return res;
 }
 
-export const config = { matcher: ['/admin/:path*', '/portal/:path*', '/login'] };
+// /signup/[token] is deliberately NOT matched: that link must work for a
+// signed-out visitor arriving from their email.
+export const config = { matcher: ['/admin/:path*', '/portal/:path*', '/go', '/login', '/signup'] };

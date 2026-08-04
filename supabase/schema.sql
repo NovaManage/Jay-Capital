@@ -100,6 +100,10 @@ create or replace function public.draw_interest(
 $$;
 
 -- Per-draw interest, exposed as a view for the statement table.
+--
+-- SECURITY: both views below MUST carry security_invoker (see migration 004).
+-- Without it a view runs as its owner and bypasses RLS on every underlying
+-- table, which silently exposed the entire loan book.
 create or replace view public.draw_details as
 select
   d.id, d.loan_id, d.draw_date, d.description, d.amount,
@@ -108,6 +112,7 @@ select
        else null end as interest_accrued
 from public.draws d
 join public.loans l on l.id = d.loan_id;
+alter view public.draw_details set (security_invoker = on);
 
 -- Loan-level rollups (total disbursed, remaining, all-time accrued interest).
 create or replace view public.loan_summary as
@@ -249,3 +254,4 @@ begin new.updated_at = now(); return new; end; $$;
 drop trigger if exists loans_touch on public.loans;
 create trigger loans_touch before update on public.loans
   for each row execute function public.touch_updated_at();
+alter view public.loan_summary set (security_invoker = on);

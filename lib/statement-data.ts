@@ -10,9 +10,22 @@ import type { PayInfo } from '@/components/StatementView';
  * So the lender lookup deliberately uses the service client. Only the two
  * borrower-facing fields are ever returned; the lender's identity is not.
  */
-export async function fetchStatementExtras(loanId: string): Promise<{
+export async function fetchStatementExtras(loanId: string, opts: { requireUserAccess?: boolean } = {}): Promise<{
   payments: PaymentRow[]; allocations: AllocationRow[]; payInfo: PayInfo | null;
 }> {
+  // Defence in depth. This function reads with the service role, which
+  // bypasses RLS, so when it is called on behalf of a signed-in user we first
+  // re-ask the database AS THAT USER whether they may see the loan at all.
+  // Callers driven by a statement token (which is itself the credential) skip
+  // this; the token lookup has already pinned the result to one loan.
+  if (opts.requireUserAccess) {
+    const { serverClient } = await import('@/lib/supabase-server');
+    const asUser = serverClient();
+    const { data: allowed } = await asUser
+      .from('loan_summary').select('loan_id').eq('loan_id', loanId).maybeSingle();
+    if (!allowed) return { payments: [], allocations: [], payInfo: null };
+  }
+
   const svc = serviceClient();
 
   const [{ data: payments }, { data: allocations }, { data: loanRow }] = await Promise.all([

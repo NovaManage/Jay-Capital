@@ -254,3 +254,25 @@ select.filter, input.field, select.field, textarea.field {
   .lp-card, .lp-btn { transition: none; }
   .lp-card:hover, .lp-btn:hover { transform: none; }
 }
+
+/* Borrower portal: loan tabs (only rendered when there is more than one) */
+.loantabs {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--border); padding-bottom: 0; margin-bottom: 4px;
+}
+.loantab {
+  display: flex; flex-direction: column; gap: 3px; text-align: left;
+  background: transparent; border: 1px solid transparent; border-bottom: none;
+  border-radius: 10px 10px 0 0; padding: 11px 18px 12px; cursor: pointer;
+  color: var(--muted); font-family: inherit; font-size: 14px;
+  transition: background .15s ease, color .15s ease;
+}
+.loantab:hover { background: var(--pale); color: var(--navy); }
+.loantab.active {
+  background: #fff; border-color: var(--border); color: var(--navy);
+  box-shadow: 0 -2px 0 var(--brass) inset, 0 -3px 0 var(--brass);
+  margin-bottom: -1px;
+}
+.loantab-addr { font-weight: 700; }
+.loantab-meta { font-size: 12px; opacity: .8; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .loantab { transition: none; } }

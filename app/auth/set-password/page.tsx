@@ -44,9 +44,7 @@ export default function SetPasswordPage() {
     if (error) { setError(error.message); setBusy(false); return; }
 
     setDone(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user?.id ?? '').single();
-    router.replace(profile?.role === 'borrower' ? '/portal' : '/admin');
+    router.replace('/go');
     router.refresh();
   }
 
