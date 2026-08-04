@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { firstOfMonth, monthName, statementMonths } from '@/lib/format';
+import { firstOfMonth, monthName, statementMonths, todayInAppTz } from '@/lib/format';
 import { emailStatement } from '@/lib/email';
 import { AlertDialog } from '@/components/Modal';
 
@@ -13,7 +13,7 @@ export default function EmailStatementControls({
   loanId, closingDate, borrowerEmail,
 }: { loanId: string; closingDate: string; borrowerEmail: string | null }) {
   const months = statementMonths(closingDate);          // newest-first
-  const defaultMonth = months.includes(firstOfMonth(new Date())) ? firstOfMonth(new Date()) : months[0];
+  const defaultMonth = months.includes(firstOfMonth(todayInAppTz())) ? firstOfMonth(todayInAppTz()) : months[0];
   const [selected, setSelected] = useState<string[]>([defaultMonth]);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);

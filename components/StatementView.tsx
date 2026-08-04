@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { money, pct, fmtDate, firstOfMonth, monthName, clampMonth, statementMonths, statementPeriod, borrowerDisplayName } from '@/lib/format';
+import { money, pct, fmtDate, firstOfMonth, monthName, clampMonth, statementMonths, statementPeriod, borrowerDisplayName, todayInAppTz } from '@/lib/format';
 import { drawInterest, buildStatement, type Draw as EngineDraw } from '@/lib/interest';
 import { buildLedger, type PaymentRow, type AllocationRow } from '@/lib/ledger';
 
@@ -31,7 +31,7 @@ export default function StatementView({
   const months = statementMonths(loan.closing_date);
   // Default to the statement for the month now in progress: this month's bill
   // went out on the 1st, so what's useful to see is what lands next.
-  const [asOf, setAsOf] = useState(() => clampMonth(firstOfMonth(new Date(), 1), loan.closing_date));
+  const [asOf, setAsOf] = useState(() => clampMonth(firstOfMonth(todayInAppTz(), 1), loan.closing_date));
 
   const rate = Number(loan.annual_rate);
   const engineLoan = {

@@ -1,3 +1,37 @@
+/**
+ * Jay Capital Funding operates on New York time, so the app does too.
+ *
+ * Vercel's servers run in UTC. Anything that asked JavaScript for "now" was
+ * therefore answering in UTC, which showed up two ways:
+ *   1. server-rendered timestamps displayed as UTC -- 3pm in New York read
+ *      as 7pm; and
+ *   2. worse, "which month is it" was wrong for the last few hours of every
+ *      month. At 8pm on 31 August in New York it is already 1 September in
+ *      UTC, so the server would offer next month's statement a day early.
+ * Anchoring to New York fixes both, and keeps the server and the browser
+ * agreeing regardless of where either one is.
+ */
+export const APP_TZ = 'America/New_York';
+
+/** Today's calendar date in New York, as a local Date at midnight. */
+export function todayInAppTz(): Date {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const get = (t: string) => Number(parts.find(p => p.type === t)?.value);
+  return new Date(get('year'), get('month') - 1, get('day'));
+}
+
+/** A timestamp rendered in New York time, wherever this runs. */
+export function fmtDateTime(value: string | Date): string {
+  const d = typeof value === 'string' ? new Date(value) : value;
+  if (isNaN(d.getTime())) return String(value);
+  return d.toLocaleString('en-US', {
+    timeZone: APP_TZ,
+    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+  });
+}
+
 export function money(v: number | string | null | undefined): string {
   const n = typeof v === 'number' ? v : parseFloat(String(v ?? '').replace(/[^0-9.\-]/g, ''));
   const safe = isNaN(n) ? 0 : n;
@@ -95,7 +129,7 @@ export function monthName(dateStr: string): string {
  */
 export function statementMonths(closingDate: string): string[] {
   const start = firstOfMonth(closingDate, 1);       // month after closing
-  const end = firstOfMonth(new Date(), 1);           // next month
+  const end = firstOfMonth(todayInAppTz(), 1);       // next month, New York time
   const out: string[] = [];
   let cur = start;
   // guard against inverted ranges (closing in the future)

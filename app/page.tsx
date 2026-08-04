@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import Logo from '@/components/Logo';
+import { todayInAppTz } from '@/lib/format';
 import ContactForm from '@/components/ContactForm';
 import EmailUs from '@/components/EmailUs';
 
@@ -205,7 +206,7 @@ export default function LandingPage() {
             <a href="#contact">{EMAIL}</a>
             <Link href="/login">Borrower Portal</Link>
           </div>
-          <div>&copy; {new Date().getFullYear()} Jay Capital Funding</div>
+          <div>&copy; {todayInAppTz().getFullYear()} Jay Capital Funding</div>
         </div>
       </footer>
     </div>

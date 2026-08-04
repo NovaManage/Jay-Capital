@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { serverClient, serviceClient } from '@/lib/supabase-server';
-import { money, fmtDate, pct } from '@/lib/format';
+import { money, fmtDate, pct, fmtDateTime, todayInAppTz } from '@/lib/format';
 import { buildLedger, chargeForPeriod, periodsThrough } from '@/lib/ledger';
 import { firstOfMonth } from '@/lib/format';
 import InsightsCharts from '@/components/InsightsCharts';
@@ -57,7 +57,7 @@ export default async function InsightsPage() {
 
   // Billed vs collected across every loan, using the same ledger the
   // statements use, so these numbers agree with what borrowers were sent.
-  const thisPeriod = firstOfMonth(new Date(), -1);
+  const thisPeriod = firstOfMonth(todayInAppTz(), -1);
   let billed = 0, collected = 0, outstanding = 0;
   const overdue: { loan: any; amount: number; months: number }[] = [];
 
@@ -78,7 +78,7 @@ export default async function InsightsPage() {
     }
     collected += p.reduce((s, x) => s + x.amount, 0);
 
-    const led = buildLedger(engineLoan, d, p, a, firstOfMonth(new Date()));
+    const led = buildLedger(engineLoan, d, p, a, firstOfMonth(todayInAppTz()));
     outstanding += Math.max(0, led.amountDue);
     if (led.priorUnpaid.length) {
       overdue.push({
@@ -102,7 +102,7 @@ export default async function InsightsPage() {
 
   // monthly series for the charts
   const months: string[] = [];
-  for (let i = 5; i >= 0; i--) months.push(firstOfMonth(new Date(), -i));
+  for (let i = 5; i >= 0; i--) months.push(firstOfMonth(todayInAppTz(), -i));
   const series = months.map(m => {
     const end = firstOfMonth(m, 1);
     return {
@@ -241,7 +241,7 @@ export default async function InsightsPage() {
                   const l: any = a.loan_id ? byId.get(a.loan_id) : null;
                   return (
                     <tr key={i}>
-                      <td>{new Date(a.occurred_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{fmtDateTime(a.occurred_at)}</td>
                       <td>
                         {(() => {
                           const acct = a.user_id ? accountById.get(a.user_id) : null;
@@ -271,8 +271,8 @@ export default async function InsightsPage() {
           </div>
         )}
         <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
-          Logged server-side: what was opened and when, with no IP address, device or
-          location tracking.
+          Times are New York time. Logged server-side: what was opened and when, with
+          no IP address, device or location tracking.
         </p>
       </div>
     </div>

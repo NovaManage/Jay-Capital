@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { money, pct, fmtDate, firstOfMonth, monthName, clampMonth, statementMonths } from '@/lib/format';
+import { money, pct, fmtDate, firstOfMonth, monthName, clampMonth, statementMonths, todayInAppTz } from '@/lib/format';
 import { buildStatement, drawInterest, type Draw as EngineDraw } from '@/lib/interest';
 import { deleteDraw, setLoanStatus, deleteLoan, deletePayment } from '@/lib/actions';
 import { buildLedger, type PaymentRow, type AllocationRow } from '@/lib/ledger';
@@ -36,7 +36,7 @@ export default function LoanDetail({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const rate = Number(summary.annual_rate);
-  const [stmtDate, setStmtDate] = useState(() => clampMonth(firstOfMonth(new Date(), 1), summary.closing_date));
+  const [stmtDate, setStmtDate] = useState(() => clampMonth(firstOfMonth(todayInAppTz(), 1), summary.closing_date));
   const months = statementMonths(summary.closing_date);
 
   const [confirmDeleteLoan, setConfirmDeleteLoan] = useState(false);

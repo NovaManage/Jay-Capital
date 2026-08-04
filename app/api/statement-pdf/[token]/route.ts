@@ -1,7 +1,7 @@
 import { type NextRequest } from 'next/server';
 import { serviceClient } from '@/lib/supabase-server';
 import { statementPDF } from '@/lib/statement-pdf';
-import { firstOfMonth, clampMonth } from '@/lib/format';
+import { firstOfMonth, clampMonth, todayInAppTz } from '@/lib/format';
 import { fetchStatementExtras } from '@/lib/statement-data';
 import { logActivity, currentUserIdOrNull } from '@/lib/activity';
 
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
   // Clamped to the loan's own valid range: ?month= is user-supplied, and an
   // out-of-range value would render a statement for a month the loan did not
   // exist in. Defaults to the month now in progress.
-  const requested = monthParam ? firstOfMonth(monthParam) : firstOfMonth(new Date(), 1);
+  const requested = monthParam ? firstOfMonth(monthParam) : firstOfMonth(todayInAppTz(), 1);
   const statementDate = clampMonth(requested, loan.closing_date);
 
   const extras = await fetchStatementExtras(loan.loan_id);

@@ -1,5 +1,5 @@
 import { buildStatement, type Loan, type Draw } from '@/lib/interest';
-import { firstOfMonth, monthName } from '@/lib/format';
+import { firstOfMonth, monthName, todayInAppTz } from '@/lib/format';
 
 /**
  * Jay Capital -- statement ledger.
@@ -197,9 +197,9 @@ export function openCharges(
   draws: Draw[],
   payments: PaymentRow[],
   allocations: AllocationRow[],
-  throughPeriodMonth: string = firstOfMonth(new Date()),
+  throughPeriodMonth: string = firstOfMonth(todayInAppTz()),
 ): PeriodCharge[] {
-  const currentPeriod = firstOfMonth(new Date());
+  const currentPeriod = firstOfMonth(todayInAppTz());
   const paidByPeriod = new Map<string, number>();
   for (const a of allocations) {
     const key = firstOfMonth(a.period_month);
