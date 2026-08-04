@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { EMAIL_LOGO_BASE64, EMAIL_LOGO_CID } from '@/lib/email-logo';
 
 /**
  * The one place email leaves this app.
@@ -34,17 +35,25 @@ export function fromAddress(): string {
   return process.env.SMTP_FROM || process.env.SMTP_USER || BRAND.email;
 }
 
-/** Branded card wrapper, so every email we send looks like the same company. */
+/**
+ * Branded card wrapper, so every email we send looks like the same company.
+ * The header is the logo itself, referenced by cid so it renders without the
+ * recipient having to allow remote images.
+ */
 export function brandShell(inner: string): string {
   return `<!doctype html><html><body style="margin:0;padding:24px;background:#F7F9FC;font-family:Arial,Helvetica,sans-serif;color:#333">
     <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #E4EAF3;border-radius:10px;padding:28px">
-      <div style="color:${NAVY};font-weight:800;letter-spacing:.12em;font-size:17px">JAY CAPITAL</div>
-      <div style="color:${GOLD};font-weight:700;letter-spacing:.3em;font-size:9px;margin-top:2px">FUNDING</div>
-      <div style="height:2px;background:${GOLD};border-radius:2px;margin:12px 0 20px"></div>
+      <img src="cid:${EMAIL_LOGO_CID}" alt="${BRAND.company}" width="300"
+           style="display:block;width:300px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none" />
+      <div style="height:2px;background:${GOLD};border-radius:2px;margin:16px 0 20px"></div>
       ${inner}
-      <p style="margin:20px 0 0;color:${MUTED};font-size:12px">
-        ${BRAND.company} &middot; ${BRAND.address} &middot; ${BRAND.phone}
-      </p>
+      <div style="border-top:1px solid #E4EAF3;margin:22px 0 0;padding-top:14px;color:${MUTED};font-size:12px;line-height:1.7">
+        <b style="color:${NAVY}">${BRAND.company}</b><br/>
+        ${BRAND.address}<br/>
+        <a href="tel:+18458280731" style="color:${MUTED};text-decoration:none">${BRAND.phone}</a>
+        &nbsp;&middot;&nbsp;
+        <a href="mailto:${BRAND.email}" style="color:${MUTED};text-decoration:none">${BRAND.email}</a>
+      </div>
     </div></body></html>`;
 }
 
@@ -67,12 +76,23 @@ export interface SendOpts {
 export async function sendMail(opts: SendOpts) {
   const from = fromAddress();
   const t = transport();
+
+  // The logo travels with the message so it shows even when remote images
+  // are blocked. cid attachments are inline and don't appear as downloads.
+  const logo = {
+    filename: 'jay-capital-funding.png',
+    content: Buffer.from(EMAIL_LOGO_BASE64, 'base64'),
+    contentType: 'image/png',
+    cid: EMAIL_LOGO_CID,
+    contentDisposition: 'inline' as const,
+  };
+
   await t.sendMail({
     from: `${BRAND.company} <${from}>`,
     to: opts.to,
     replyTo: opts.replyTo || from,
     subject: opts.subject,
     html: opts.html,
-    attachments: opts.attachments,
+    attachments: [logo, ...(opts.attachments ?? [])],
   });
 }

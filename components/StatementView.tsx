@@ -210,9 +210,24 @@ export default function StatementView({
           </div>
         )}
 
-        <p className="muted" style={{ marginTop: 28, fontSize: 12 }}>
-          Questions about this statement? Reply to the email this link was sent from.
-        </p>
+        <div style={{
+          marginTop: 30, paddingTop: 16, borderTop: '1px solid var(--navy-soft)',
+          fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.7,
+        }}>
+          <div style={{ fontWeight: 700, color: 'var(--navy)', marginBottom: 2 }}>
+            Questions about this statement?
+          </div>
+          <div>
+            {SERVICER} &middot; 33 Downtown Dr, Monsey, NY 10952
+          </div>
+          <div>
+            <a href="tel:+18458280731" style={{ color: 'var(--navy-med)' }}>(845) 828-0731</a>
+            {' · '}
+            <a href="mailto:Yossi@JayCapitalFunding.com" style={{ color: 'var(--navy-med)' }}>
+              Yossi@JayCapitalFunding.com
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

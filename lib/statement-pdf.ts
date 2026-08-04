@@ -295,8 +295,11 @@ export async function statementPDF(
   }
 
   // ---- footer on every page, once the page count is known
-  const askLine = 'Questions about this statement? Reply directly to the email this was sent from.';
-  const footLine = `${BRAND.company}  ·  ${BRAND.address}  ·  ${BRAND.phone}  ·  ${BRAND.email}`;
+  // Give them the actual contact details rather than telling them to reply to
+  // an email -- a statement gets printed, forwarded and filed away from the
+  // message it arrived in.
+  const askLine = `Questions about this statement? Call ${BRAND.phone} or email ${BRAND.email}`;
+  const footLine = `${BRAND.company}  ·  ${BRAND.address}`;
   pages.forEach((p, i) => {
     p.drawRectangle({ x: M, y: 64, width: PW - 2 * M, height: 0.8, color: GOLD });
     const aw = font.widthOfTextAtSize(askLine, 7.5);
