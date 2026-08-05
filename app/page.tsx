@@ -188,7 +188,7 @@ export default function LandingPage() {
                 <span className="lp-contact-plain">33 Downtown Drive, Suite 501<br />Monsey, NY 10952</span>
               </div>
               <p className="lp-contact-hint">
-                Prefer your own email client? <EmailUs className="lp-linkbtn" label="Open it here" subject="Loan enquiry" />
+                Prefer to email us directly? <EmailUs className="lp-linkbtn" label="Get the address" subject="Loan enquiry" />
               </p>
             </div>
             <div id="contact-form" style={{ scrollMarginTop: 90 }}>
