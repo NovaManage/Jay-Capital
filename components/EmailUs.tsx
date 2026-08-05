@@ -46,7 +46,15 @@ export default function EmailUs({
             <button className="btn secondary" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
           </div>
 
-          <a className="btn" href={`mailto:${ADDRESS}?subject=${s}`} style={{ textAlign: 'center', textDecoration: 'none' }}>
+          {/* new tab, so handing off to a mail client never navigates the
+              page they were reading away from under them */}
+          <a
+            className="btn"
+            href={`mailto:${ADDRESS}?subject=${s}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textAlign: 'center', textDecoration: 'none' }}
+          >
             Open my email app
           </a>
           <a className="btn secondary" href={gmail} target="_blank" rel="noopener noreferrer" style={{ textAlign: 'center', textDecoration: 'none' }}>

@@ -185,7 +185,7 @@ export default function LandingPage() {
               </div>
               <div className="lp-contact-item">
                 <span className="lbl">Office</span>
-                <span className="lp-contact-plain">33 Downtown Dr<br />Monsey, NY 10952</span>
+                <span className="lp-contact-plain">33 Downtown Drive, Suite 501<br />Monsey, NY 10952</span>
               </div>
               <p className="lp-contact-hint">
                 Prefer your own email client? <EmailUs className="lp-linkbtn" label="Open it here" subject="Loan enquiry" />

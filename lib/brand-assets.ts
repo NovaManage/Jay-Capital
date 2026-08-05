@@ -389,7 +389,7 @@ export const MARK_PNG_BASE64 =
 
 export const BRAND = {
   company: 'Jay Capital Funding',
-  address: '33 Downtown Dr, Monsey, NY 10952',
+  address: '33 Downtown Drive, Suite 501, Monsey, NY 10952',
   phone: '(845) 828-0731',
   email: 'Yossi@JayCapitalFunding.com',
 };
