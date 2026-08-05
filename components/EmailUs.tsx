@@ -19,10 +19,43 @@ export default function EmailUs({
 }: { subject?: string; label?: string; className?: string }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [noMailApp, setNoMailApp] = useState(false);
 
   const s = encodeURIComponent(subject);
   const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(ADDRESS)}&su=${s}`;
   const outlook = `https://outlook.live.com/mail/0/deeplink/compose?to=${encodeURIComponent(ADDRESS)}&subject=${s}`;
+
+  /**
+   * Hand off to the device's mail client without risking a blank tab.
+   *
+   * target="_blank" is the obvious approach and the wrong one: when no mail
+   * client is registered the new tab opens and just sits there empty. Setting
+   * location.href on the CURRENT tab is safe -- an unhandled mailto: does not
+   * navigate the page anywhere, it simply does nothing.
+   *
+   * The catch is that "nothing" is indistinguishable from success to the user,
+   * so we watch for the handoff: if a client opens, the browser loses focus or
+   * the page is hidden. If neither happens within a moment, nothing took the
+   * link, and we say so and point at the alternatives.
+   */
+  function openMailApp() {
+    setNoMailApp(false);
+    let handedOff = false;
+    const mark = () => { handedOff = true; };
+
+    window.addEventListener('blur', mark);
+    document.addEventListener('visibilitychange', mark);
+    window.addEventListener('pagehide', mark);
+
+    window.location.href = `mailto:${ADDRESS}?subject=${s}`;
+
+    window.setTimeout(() => {
+      window.removeEventListener('blur', mark);
+      document.removeEventListener('visibilitychange', mark);
+      window.removeEventListener('pagehide', mark);
+      if (!handedOff) setNoMailApp(true);
+    }, 1200);
+  }
 
   async function copy() {
     try {
@@ -34,7 +67,7 @@ export default function EmailUs({
 
   return (
     <>
-      <button type="button" className={className} onClick={() => setOpen(true)}>{label}</button>
+      <button type="button" className={className} onClick={() => { setNoMailApp(false); setOpen(true); }}>{label}</button>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Email Jay Capital Funding" maxWidth={460}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -46,17 +79,16 @@ export default function EmailUs({
             <button className="btn secondary" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
           </div>
 
-          {/* new tab, so handing off to a mail client never navigates the
-              page they were reading away from under them */}
-          <a
-            className="btn"
-            href={`mailto:${ADDRESS}?subject=${s}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ textAlign: 'center', textDecoration: 'none' }}
-          >
+          <button type="button" className="btn" onClick={openMailApp}>
             Open my email app
-          </a>
+          </button>
+
+          {noMailApp && (
+            <div className="alert info" style={{ margin: 0 }}>
+              This device doesn&apos;t seem to have an email app set up. Use Gmail or
+              Outlook below, or copy the address and paste it wherever you read email.
+            </div>
+          )}
           <a className="btn secondary" href={gmail} target="_blank" rel="noopener noreferrer" style={{ textAlign: 'center', textDecoration: 'none' }}>
             Compose in Gmail
           </a>
