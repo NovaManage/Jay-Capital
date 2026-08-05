@@ -1,6 +1,7 @@
 import { serverClient } from '@/lib/supabase-server';
 import PortalTitle from '@/components/PortalTitle';
 import LiveRefresh from '@/components/LiveRefresh';
+import IdleTimeout from '@/components/IdleTimeout';
 import Logo from '@/components/Logo';
 import PortalLoans, { type PortalLoan } from '@/components/PortalLoans';
 import { fetchStatementExtras } from '@/lib/statement-data';
@@ -52,6 +53,7 @@ export default async function PortalPage() {
     <>
       <PortalTitle name={borrowerName} />
       <LiveRefresh />
+      <IdleTimeout />
       {Nav}
       <PortalLoans loans={items} userId={user?.id ?? ''} userEmail={user?.email ?? ''} />
     </>

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { serverClient } from '@/lib/supabase-server';
 import LiveRefresh from '@/components/LiveRefresh';
+import IdleTimeout from '@/components/IdleTimeout';
 import Logo from '@/components/Logo';
 
 export const dynamic = 'force-dynamic';
@@ -27,6 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <>
       <LiveRefresh />
+      <IdleTimeout />
       <nav className="nav">
         <Link href="/admin" style={{ textDecoration: 'none', padding: 0 }}><Logo size={26} /></Link>
         <Link href="/admin">Portfolio</Link>

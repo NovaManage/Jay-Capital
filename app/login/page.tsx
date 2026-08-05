@@ -27,6 +27,7 @@ function LoginForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
+  const timedOut = params.get('timedout') === '1';
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
@@ -56,6 +57,12 @@ function LoginForm() {
           {mode === 'signin' ? 'Sign In' : 'Reset Password'}
         </h1>
         <div className="rule" />
+
+        {timedOut && (
+          <div className="alert info" style={{ marginTop: 0 }}>
+            You were signed out after a period of inactivity. Please sign in again.
+          </div>
+        )}
 
         <form onSubmit={mode === 'signin' ? signIn : forgot}>
           <div className="field-wrap" style={{ marginBottom: 14 }}>
