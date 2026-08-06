@@ -778,59 +778,6 @@ export async function createBorrowerUser(opts: {
   });
 }
 
-/**
- * Borrower self-setup from a statement link.
- *
- * The statement token already grants full sight of this loan, so anyone
- * holding the link can start this. The safety property is that the address
- * is taken from the loan record, NOT from the form -- a link-holder cannot
- * bind the loan to an email of their choosing.
- */
-export async function claimPortalAccount(token: string, password: string) {
-  return run(async () => {
-    if (!password || password.length < 6) {
-      throw new Error('Please choose a password of at least 6 characters.');
-    }
-
-    const svc = serviceClient();
-    const { data: loan } = await svc.from('loan_summary')
-      .select('loan_id, borrower_id, borrower_name, borrower_email')
-      .eq('access_token', token).maybeSingle();
-    if (!loan) throw new Error('This statement link is no longer valid. Please contact Jay Capital.');
-
-    const email = String(loan.borrower_email ?? '').trim();
-    if (!email) {
-      throw new Error('There is no email address on file for this loan yet, so an account cannot be set up here. Please contact Jay Capital.');
-    }
-
-    if (await findUserByEmail(svc, email)) {
-      throw new Error(`An account already exists for ${email}. Please sign in instead -- you can use the "Email link" option on the sign-in page if you have forgotten your password.`);
-    }
-
-    const { data, error } = await svc.auth.admin.createUser({
-      email, password, email_confirm: true,
-      user_metadata: { full_name: loan.borrower_name },
-    });
-    if (error) throw new Error(error.message);
-    const userId = data?.user?.id;
-    if (!userId) throw new Error('The account could not be created. Please contact Jay Capital.');
-
-    await svc.from('profiles').upsert({
-      id: userId, email, full_name: loan.borrower_name ?? null, role: 'borrower',
-    }, { onConflict: 'id' });
-
-    const linked = await linkBorrowerRecords(svc, userId, email, loan.borrower_id);
-
-    return {
-      email,
-      linked,
-      message: linked > 1
-        ? `Your account is ready, with ${linked} loans connected. Sign in with ${email} and the password you just chose.`
-        : `Your account is ready. Sign in with ${email} and the password you just chose.`,
-    };
-  });
-}
-
 /** Email a password-reset link. */
 async function emailResetLink(email: string, link: string) {
   await sendMail({

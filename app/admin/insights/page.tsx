@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { serverClient, serviceClient } from '@/lib/supabase-server';
 import { money, fmtDate, pct, fmtDateTime, todayInAppTz } from '@/lib/format';
-import { buildLedger, chargeForPeriod, periodsThrough } from '@/lib/ledger';
+import { buildLedger, chargeForPeriod, periodsThrough, pastDueAsOf } from '@/lib/ledger';
 import { firstOfMonth } from '@/lib/format';
 import InsightsCharts from '@/components/InsightsCharts';
+import ActivityFeed from '@/components/ActivityFeed';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -35,8 +36,9 @@ export default async function InsightsPage() {
     svc.from('payment_allocations').select('payment_id, loan_id, period_month, amount'),
     svc.from('borrowers').select('id, name, email, user_id'),
     svc.from('profiles').select('id, email, full_name, role, active'),
-    svc.from('portal_activity').select('kind, loan_id, user_id, occurred_at')
-       .order('occurred_at', { ascending: false }).limit(400),
+    svc.from('portal_activity').select('id, kind, loan_id, user_id, occurred_at')
+       .gte('occurred_at', new Date(Date.now() - 30 * 86400000).toISOString())
+       .order('occurred_at', { ascending: false }).limit(26),
   ]);
 
   const loanList = loans ?? [];
@@ -59,7 +61,7 @@ export default async function InsightsPage() {
   // statements use, so these numbers agree with what borrowers were sent.
   const thisPeriod = firstOfMonth(todayInAppTz(), -1);
   let billed = 0, collected = 0, outstanding = 0;
-  const overdue: { loan: any; amount: number; months: number }[] = [];
+  const overdue: { loan: any; amount: number; months: number; oldest: string }[] = [];
 
   for (const l of loanList) {
     const engineLoan = {
@@ -80,11 +82,16 @@ export default async function InsightsPage() {
 
     const led = buildLedger(engineLoan, d, p, a, firstOfMonth(todayInAppTz()));
     outstanding += Math.max(0, led.amountDue);
-    if (led.priorUnpaid.length) {
+
+    // As of TODAY, not relative to a statement: a charge is late the moment
+    // its due date passes, so the month just billed counts from the 1st.
+    const late = pastDueAsOf(engineLoan, d, p, a, todayInAppTz());
+    if (late.length) {
       overdue.push({
         loan: l,
-        amount: led.priorUnpaid.reduce((s, r) => s + r.balance, 0),
-        months: led.priorUnpaid.length,
+        amount: late.reduce((s, r) => s + r.balance, 0),
+        months: late.length,
+        oldest: late[0].statementDate,
       });
     }
   }
@@ -96,9 +103,23 @@ export default async function InsightsPage() {
   const noLogin = (borrowers ?? []).filter((b: any) => !b.user_id);
   const staffCount = (profiles ?? []).filter((p: any) => p.role === 'admin' || p.role === 'staff').length;
 
-  const now = Date.now();
-  const since = (days: number) => actList.filter((a: any) => now - new Date(a.occurred_at).getTime() < days * 86400000);
-  const last7 = since(7), last30 = since(30);
+  // Counted in the database rather than by loading the rows: the feed itself
+  // is paged, so there is no full array to measure.
+  const iso = (days: number) => new Date(Date.now() - days * 86400000).toISOString();
+  const [{ count: visits7 }, { count: visits30 }] = await Promise.all([
+    svc.from('portal_activity').select('id', { count: 'exact', head: true }).gte('occurred_at', iso(7)),
+    svc.from('portal_activity').select('id', { count: 'exact', head: true }).gte('occurred_at', iso(30)),
+  ]);
+
+  // Visit counts per month for the chart, aggregated in the database.
+  const sixMonthsAgo = firstOfMonth(todayInAppTz(), -5);
+  const { data: visitRows } = await svc.from('portal_activity')
+    .select('occurred_at').gte('occurred_at', sixMonthsAgo).limit(50000);
+  const visitsByMonth = new Map<string, number>();
+  for (const v of visitRows ?? []) {
+    const k = String(v.occurred_at).slice(0, 8) + '01';
+    visitsByMonth.set(k, (visitsByMonth.get(k) ?? 0) + 1);
+  }
 
   // monthly series for the charts
   const months: string[] = [];
@@ -111,7 +132,7 @@ export default async function InsightsPage() {
                      .reduce((s: number, d: any) => s + Number(d.amount), 0),
       payments: payList.filter((p: any) => p.payment_date >= m && p.payment_date < end)
                        .reduce((s: number, p: any) => s + Number(p.amount), 0),
-      visits: actList.filter((a: any) => a.occurred_at >= m && a.occurred_at < end).length,
+      visits: visitsByMonth.get(m) ?? 0,
     };
   });
 
@@ -162,15 +183,16 @@ export default async function InsightsPage() {
       <div className="card" style={{ marginTop: 20 }}>
         <h2 style={{ color: 'var(--navy)', marginTop: 0 }}>Past Due</h2>
         {overdue.length === 0 ? (
-          <p className="muted" style={{ margin: 0 }}>Nothing is past due. Every issued statement has been settled.</p>
+          <p className="muted" style={{ margin: 0 }}>Nothing is past due. Every charge that has come due has been settled.</p>
         ) : (
           <table className="bordered">
-            <thead><tr><th>Borrower</th><th>Property</th><th className="num">Months Open</th><th className="num">Amount</th></tr></thead>
+            <thead><tr><th>Borrower</th><th>Property</th><th>Due Since</th><th className="num">Months Open</th><th className="num">Amount</th></tr></thead>
             <tbody>
               {overdue.map(o => (
                 <tr key={o.loan.loan_id}>
                   <td><Link href={`/admin/loans/${o.loan.loan_id}`}>{o.loan.borrower_name}</Link></td>
                   <td>{o.loan.property}</td>
+                  <td>{fmtDate(o.oldest)}</td>
                   <td className="num">{o.months}</td>
                   <td className="num">{money(o.amount)}</td>
                 </tr>
@@ -183,8 +205,8 @@ export default async function InsightsPage() {
       <div className="kpis" style={{ marginTop: 20 }}>
         <div className="kpi"><div className="label">Borrowers With A Login</div><div className="value">{withLogin}</div></div>
         <div className="kpi"><div className="label">Without A Login</div><div className="value">{noLogin.length}</div></div>
-        <div className="kpi"><div className="label">Portal Visits (7d)</div><div className="value">{last7.length}</div></div>
-        <div className="kpi"><div className="label">Portal Visits (30d)</div><div className="value">{last30.length}</div></div>
+        <div className="kpi"><div className="label">Portal Visits (7d)</div><div className="value">{visits7 ?? 0}</div></div>
+        <div className="kpi"><div className="label">Portal Visits (30d)</div><div className="value">{visits30 ?? 0}</div></div>
         <div className="kpi"><div className="label">Admin / Staff</div><div className="value">{staffCount}</div></div>
       </div>
 
@@ -227,52 +249,18 @@ export default async function InsightsPage() {
       </div>
 
       <div className="card" style={{ marginTop: 20 }}>
-        <h2 style={{ color: 'var(--navy)', marginTop: 0 }}>Recent Borrower Activity</h2>
-        {actList.length === 0 ? (
-          <p className="muted" style={{ margin: 0 }}>
-            No activity recorded yet. Views are logged from the moment this update goes live.
-          </p>
-        ) : (
-          <div className="tablescroll">
-            <table className="bordered">
-              <thead><tr><th>When</th><th>Who</th><th>What</th><th>Loan</th><th>Borrower</th></tr></thead>
-              <tbody>
-                {actList.slice(0, 25).map((a: any, i: number) => {
-                  const l: any = a.loan_id ? byId.get(a.loan_id) : null;
-                  return (
-                    <tr key={i}>
-                      <td style={{ whiteSpace: 'nowrap' }}>{fmtDateTime(a.occurred_at)}</td>
-                      <td>
-                        {(() => {
-                          const acct = a.user_id ? accountById.get(a.user_id) : null;
-                          if (acct) {
-                            return (
-                              <>
-                                <div style={{ fontWeight: 600 }}>{acct.name || acct.email}</div>
-                                {acct.name && <div className="muted" style={{ fontSize: 12 }}>{acct.email}</div>}
-                                {acct.role !== 'borrower' && <span className={`badge ${acct.role}`}>{acct.role}</span>}
-                              </>
-                            );
-                          }
-                          if (a.user_id) {
-                            return <span className="muted">deleted account</span>;
-                          }
-                          return <span className="muted" title="Opened with a statement link, which needs no sign-in">Not signed in</span>;
-                        })()}
-                      </td>
-                      <td>{kindLabel[a.kind] || a.kind}</td>
-                      <td>{l ? <Link href={`/admin/loans/${l.loan_id}`}>{l.loan_number}</Link> : <span className="muted">—</span>}</td>
-                      <td>{l ? l.borrower_name : <span className="muted">—</span>}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <h2 style={{ color: 'var(--navy)', marginTop: 0 }}>Recent Activity</h2>
+        <ActivityFeed
+          initialRows={actList.slice(0, 25) as any}
+          initialHasMore={actList.length > 25}
+          loans={loanList.map((l: any) => ({ loan_id: l.loan_id, loan_number: l.loan_number, borrower_name: l.borrower_name }))}
+          accounts={(profiles ?? []).map((p: any) => ({ id: p.id, email: p.email, name: p.full_name, role: p.role }))}
+        />
+
         <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
-          Times are New York time. Logged server-side: what was opened and when, with
-          no IP address, device or location tracking.
+          Last 30 days, newest first, loaded as you scroll. Times are New York time.
+          Logged server-side: what was opened and when, with no IP address, device or
+          location tracking.
         </p>
       </div>
     </div>

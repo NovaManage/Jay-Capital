@@ -434,3 +434,11 @@ select.filter, input.field, select.field, textarea.field {
   text-underline-offset: 3px;
 }
 .lp-linkbtn:hover { color: #fff; }
+
+/* Activity feed: fixed height so the card keeps its place on the page, with
+   the list scrolling inside it and paging in as you reach the bottom. */
+.activity-scroll {
+  max-height: 420px; overflow-y: auto; overflow-x: auto;
+  border-radius: 8px; -webkit-overflow-scrolling: touch;
+}
+.activity-scroll thead th { position: sticky; top: 0; z-index: 2; }

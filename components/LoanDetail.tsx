@@ -6,19 +6,18 @@ import { useRouter } from 'next/navigation';
 import { money, pct, fmtDate, firstOfMonth, monthName, clampMonth, statementMonths, todayInAppTz } from '@/lib/format';
 import { buildStatement, drawInterest, type Draw as EngineDraw } from '@/lib/interest';
 import { deleteDraw, setLoanStatus, deleteLoan, deletePayment } from '@/lib/actions';
-import { buildLedger, type PaymentRow, type AllocationRow } from '@/lib/ledger';
+import { buildLedger, pastDueAsOf, type PaymentRow, type AllocationRow } from '@/lib/ledger';
 import AddPaymentModal from '@/components/AddPaymentModal';
 import EmailStatementControls from '@/components/EmailStatementControls';
 import AddDrawModal from '@/components/AddDrawModal';
 import AddBorrowerModal from '@/components/AddBorrowerModal';
-import SendPortalLinkModal from '@/components/SendPortalLinkModal';
 import { ConfirmDialog, AlertDialog } from '@/components/Modal';
 import LoanPager from '@/components/LoanPager';
 
 interface Summary {
   loan_id: string; loan_number: string; property: string; loan_amount: number;
   acquisition: number; construction: number; annual_rate: number; closing_date: string;
-  status: string; access_token: string; borrower_id: string; borrower_name: string;
+  status: string; borrower_id: string; borrower_name: string;
   is_entity?: boolean | null; entity_name?: string | null;
   borrower_email: string | null; borrower_phone: string | null; lender_name: string | null;
   total_disbursed: number; remaining_draw: number; accrued_interest: number;
@@ -42,7 +41,6 @@ export default function LoanDetail({
   const [confirmDeleteLoan, setConfirmDeleteLoan] = useState(false);
   const [confirmDeleteDraw, setConfirmDeleteDraw] = useState<string | null>(null);
   const [confirmDeletePayment, setConfirmDeletePayment] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const engineLoan = {
@@ -52,9 +50,10 @@ export default function LoanDetail({
   const engineDraws: EngineDraw[] = draws.map(d => ({ draw_date: d.draw_date, amount: Number(d.amount), description: d.description }));
   const stmt = buildStatement(engineLoan, engineDraws, stmtDate);
   const ledger = buildLedger(engineLoan, engineDraws, payments, allocations, stmtDate);
+  // Overdue as of today, independent of which statement month is on screen.
+  const overdueNow = pastDueAsOf(engineLoan, engineDraws, payments, allocations, todayInAppTz());
 
-  const statementUrl = typeof window !== 'undefined' ? `${window.location.origin}/statement/${summary.access_token}` : '';
-  const pdfHref = `/api/statement-pdf/${summary.access_token}?month=${stmtDate}`;
+  const pdfHref = `/api/statement-pdf/${summary.loan_id}?month=${stmtDate}`;
   const go = (delta: number) => setStmtDate(cur => clampMonth(firstOfMonth(cur, delta), summary.closing_date));
 
   // months is newest-first; disable each arrow once there is nowhere to go.
@@ -143,14 +142,16 @@ export default function LoanDetail({
           <div className="row"><span className="k">Lender</span><span className="v">{summary.lender_name ?? ''}</span></div>
         </div>
 
-        {statementUrl && (
+        {canEdit && (
           <div className="alert info" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ wordBreak: 'break-all' }}>Borrower link: <a href={statementUrl} target="_blank">{statementUrl}</a></span>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn secondary" onClick={() => { navigator.clipboard.writeText(statementUrl); setCopied(true); }}>Copy</button>
-              {canSend && <SendPortalLinkModal loanId={summary.loan_id} borrowerEmail={summary.borrower_email} />}
-              {canEdit && <AddBorrowerModal loanId={summary.loan_id} borrowerId={summary.borrower_id} borrowerName={summary.borrower_name} borrowerEmail={summary.borrower_email} />}
-            </div>
+            <span>
+              Borrowers reach their statements by signing in, so every view is recorded
+              against their account.
+            </span>
+            <AddBorrowerModal
+              loanId={summary.loan_id} borrowerId={summary.borrower_id}
+              borrowerName={summary.borrower_name} borrowerEmail={summary.borrower_email}
+            />
           </div>
         )}
       </div>
@@ -185,9 +186,11 @@ export default function LoanDetail({
           <div className="row"><span className="k">Current charges</span><span className="v">{money(ledger.currentCharge)}</span></div>
           <div className="row due"><span className="k">Amount Due</span><span className="v">{money(ledger.amountDue)}</span></div>
         </div>
-        {ledger.priorUnpaid.length > 0 && (
-          <p className="muted" style={{ marginBottom: 0 }}>
-            Past due: {ledger.priorUnpaid.map(r => `${fmtDate(r.statementDate)} ${money(r.balance)}`).join(' · ')}
+        {overdueNow.length > 0 && (
+          <p style={{ marginBottom: 0, color: 'var(--danger)', fontWeight: 600 }}>
+            Past due {money(overdueNow.reduce((s, r) => s + r.balance, 0))} across{' '}
+            {overdueNow.length} statement{overdueNow.length === 1 ? '' : 's'}, oldest{' '}
+            {fmtDate(overdueNow[0].statementDate)}.
           </p>
         )}
         {ledger.unapplied > 0.005 && (
@@ -315,7 +318,6 @@ export default function LoanDetail({
         }}
         onCancel={() => setConfirmDeletePayment(null)}
       />
-      <AlertDialog open={copied} title="Copied" message="Borrower link copied to clipboard." tone="success" onClose={() => setCopied(false)} />
       <AlertDialog
         open={!!actionError}
         title="That didn't work"

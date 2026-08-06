@@ -21,7 +21,6 @@ export interface LoanRow {
   accrued_interest: number;
   total_draw?: number;
   status: string;
-  access_token: string;
 }
 
 type SortKey = keyof LoanRow;

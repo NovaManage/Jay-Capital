@@ -184,6 +184,56 @@ export function buildLedger(
 }
 
 /**
+ * When a period's interest falls due: the first of the month AFTER the period,
+ * which is also the date of the statement that bills it. August's interest is
+ * billed on the 1 September statement and is late from that day.
+ */
+export function dueDateFor(periodMonth: string): string {
+  return firstOfMonth(periodMonth, 1);
+}
+
+/**
+ * Everything genuinely overdue as of a date -- every period whose due date has
+ * passed and still carries a balance.
+ *
+ * This is NOT the same as a statement's "unpaid previous charges". That list
+ * is relative to the statement being read: on the 1 September statement,
+ * August's interest is the current charge. But the moment 1 September arrives
+ * unpaid, August is late. Anything reporting on the book as of today -- the
+ * insights past-due table, the alert on a loan -- has to use this, or a month
+ * stays invisible until the next statement is issued.
+ */
+export function pastDueAsOf(
+  loan: Loan,
+  draws: Draw[],
+  payments: PaymentRow[],
+  allocations: AllocationRow[],
+  asOf: Date | string = new Date(),
+): PeriodCharge[] {
+  const today = typeof asOf === 'string' ? asOf : iso(asOf);
+
+  const paidByPeriod = new Map<string, number>();
+  for (const a of allocations) {
+    const key = firstOfMonth(a.period_month);
+    paidByPeriod.set(key, (paidByPeriod.get(key) ?? 0) + Number(a.amount));
+  }
+
+  // Periods whose due date is on or before today.
+  const lastDue = firstOfMonth(today, -1);
+  return periodsThrough(loan.closing_date, lastDue)
+    .map(p => {
+      const charge = chargeForPeriod(loan, draws, p);
+      const paid = paidByPeriod.get(p) ?? 0;
+      return {
+        periodMonth: p, label: monthName(p),
+        statementDate: dueDateFor(p), statementLabel: monthName(dueDateFor(p)),
+        charge, paid, balance: charge - paid, inProgress: false,
+      };
+    })
+    .filter(r => r.charge > 0.005 && r.balance > 0.005);
+}
+
+/**
  * Outstanding balance per period, for the "apply this payment to" picker.
  * Oldest first, settled months dropped.
  *

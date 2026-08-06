@@ -5,6 +5,7 @@ import { run } from '@/lib/result';
 import { serviceClient } from '@/lib/supabase-server';
 import { sendMail, brandShell, button, rawLink } from '@/lib/mailer';
 import { syncBorrowerLinksForEmail, releaseMismatchedLinks } from '@/lib/borrower-links';
+import { logActivity } from '@/lib/activity';
 
 /**
  * Borrower self-service signup.
@@ -141,6 +142,7 @@ export async function completePortalSignup(token: string, password: string) {
     await syncBorrowerLinksForEmail(svc, email);
 
     await svc.from('portal_signup_tokens').update({ used_at: new Date().toISOString() }).eq('token', token);
+    await logActivity('account_created', null, userId);
 
     const { count } = await svc.from('loans')
       .select('id', { count: 'exact', head: true })
@@ -193,6 +195,7 @@ export async function changeMyEmail(newEmailRaw: string) {
     await releaseMismatchedLinks(svc, user.id, email);
     const linked = await syncBorrowerLinksForEmail(svc, email);
 
+    await logActivity('email_changed', null, user.id);
     const { data: matches } = await svc.from('borrowers').select('name').ilike('email', email).limit(1);
     const name = (matches ?? [])[0]?.name;
     if (name) await svc.from('profiles').update({ full_name: name }).eq('id', user.id);

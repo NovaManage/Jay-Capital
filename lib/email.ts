@@ -9,6 +9,7 @@ import { firstOfMonth, monthName, money, fmtDate, borrowerDisplayName } from '@/
 import { buildStatement, type Draw as EngineDraw } from '@/lib/interest';
 import { buildLedger } from '@/lib/ledger';
 import { fetchStatementExtras } from '@/lib/statement-data';
+import { logActivity } from '@/lib/activity';
 
 async function requireStaffOrAdmin() {
   const supabase = serverClient();
@@ -94,6 +95,9 @@ export async function emailStatement(loanId: string, months: string[]) {
       attachments,
     });
 
+    const { data: { user: sender } } = await supabase.auth.getUser();
+    await logActivity('statement_emailed', loanId, sender?.id ?? null);
+
     return { ok: true, count: cleanMonths.length, to: loan.borrower_email };
   });
 }
@@ -111,7 +115,7 @@ export async function sendPortalWelcome(loanId: string, toEmail: string) {
     if (!loan) throw new Error('Loan not found');
 
     const site = process.env.NEXT_PUBLIC_SITE_URL || '';
-    const statementLink = site ? `${site}/statement/${loan.access_token}` : `/statement/${loan.access_token}`;
+    const signInLink = site ? `${site}/login` : '/login';
 
     const navy = '#1F3864', muted = '#6B7A90', pale = '#EEF2F9';
     const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#F7F9FC;font-family:Arial,Helvetica,sans-serif;color:#333">
@@ -119,7 +123,7 @@ export async function sendPortalWelcome(loanId: string, toEmail: string) {
         <div style="color:${navy};font-weight:800;letter-spacing:.04em;font-size:18px;margin-bottom:4px">JAY CAPITAL</div>
         <div style="height:3px;background:${navy};border-radius:2px;margin:8px 0 20px"></div>
         <p style="margin:0 0 14px">Hi ${loan.is_entity && loan.entity_name ? loan.entity_name : (loan.borrower_name.split(' ')[0] || loan.borrower_name)},</p>
-        <p style="margin:0 0 14px">Welcome to your Jay Capital borrower portal for <b>${loan.property}</b>. You now have a private link to view your loan online, anytime.</p>
+        <p style="margin:0 0 14px">Welcome to your Jay Capital borrower portal for <b>${loan.property}</b>. You can view your loan online any time by signing in.</p>
         <div style="background:${pale};border-radius:8px;padding:14px 16px;margin:0 0 18px">
           <div style="color:${navy};font-weight:700;margin-bottom:8px">In your portal you can:</div>
           <ul style="margin:0;padding-left:18px;color:#333;line-height:1.6">
@@ -129,8 +133,8 @@ export async function sendPortalWelcome(loanId: string, toEmail: string) {
             <li>Check your loan amount, disbursed total, and remaining draw balance</li>
           </ul>
         </div>
-        <p style="margin:0 0 18px"><a href="${statementLink}" style="background:${navy};color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;display:inline-block;font-weight:600">Open my portal</a></p>
-        <p style="margin:0 0 6px;color:${muted};font-size:12px;word-break:break-all">Or paste this link into your browser:<br/>${statementLink}</p>
+        <p style="margin:0 0 18px"><a href="${signInLink}" style="background:${navy};color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;display:inline-block;font-weight:600">Sign in to my portal</a></p>
+        <p style="margin:0 0 6px;color:${muted};font-size:12px;word-break:break-all">Or paste this into your browser:<br/>${signInLink}</p>\n      <p style="margin:10px 0 0;color:${muted};font-size:12px">Use the email address this was sent to. If you have not set a password yet, choose &ldquo;Create an account&rdquo; on the sign-in page.</p>
         <p style="margin:16px 0 0;color:${muted};font-size:13px">Questions? Just reply to this email.<br/>${profile.full_name || 'Jay Capital'}</p>
       </div></body></html>`;
 

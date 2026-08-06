@@ -13,7 +13,7 @@ export interface StatementData {
   construction: number; annual_rate: number; closing_date: string;
   borrower_name: string; borrower_email: string | null; borrower_phone: string | null;
   lender_name: string | null; total_disbursed: number; remaining_draw: number;
-  accrued_interest: number; access_token: string;
+  accrued_interest: number;
   is_entity?: boolean | null; entity_name?: string | null;
 }
 export interface StatementDraw { draw_date: string; description: string; amount: number; interest_accrued: number | null; }
@@ -44,7 +44,11 @@ export default function StatementView({
   const ledger = buildLedger(engineLoan, engineDraws, payments, allocations, asOf);
   const period = statementPeriod(asOf);
   const shortPeriod = stmt.periodEnd.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  const pdfHref = `/api/statement-pdf/${loan.access_token}?month=${asOf}`;
+  const pdfHref = `/api/statement-pdf/${loan.loan_id}?month=${asOf}`;
+
+  // A statement's charges fall due on its own date, so once that date has
+  // passed with a balance outstanding, this statement is late.
+  const isLate = ledger.amountDue > 0.005 && asOf <= firstOfMonth(todayInAppTz());
 
   const go = (delta: number) => setAsOf(cur => clampMonth(firstOfMonth(cur, delta), loan.closing_date));
 
@@ -130,6 +134,14 @@ export default function StatementView({
             <div className="row"><span className="k">Current Charges</span><span className="v">{money(ledger.currentCharge)}</span></div>
             <div className="row due"><span className="k">Amount Due</span><span className="v">{money(ledger.amountDue)}</span></div>
           </div>
+          {isLate && (
+            <div style={{
+              background: '#FDECEA', color: 'var(--danger)', fontWeight: 600,
+              padding: '10px 14px', fontSize: 13.5,
+            }}>
+              Payment was due {fmtDate(asOf)}.
+            </div>
+          )}
         </div>
 
         {ledger.paymentsInPeriod.length > 0 && (
