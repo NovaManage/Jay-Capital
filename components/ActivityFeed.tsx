@@ -16,6 +16,8 @@ export interface ActivityRow {
 export interface ActivityLoan { loan_id: string; loan_number: string; borrower_name: string }
 export interface ActivityAccount { id: string; email: string; name: string | null; role: string }
 
+const PAGE_SIZE = 50;
+
 const KIND_LABEL: Record<string, string> = {
   portal_view: 'Opened portal',
   pdf_download: 'Downloaded PDF',
@@ -48,33 +50,73 @@ export default function ActivityFeed({
   const [err, setErr] = useState('');
   const sentinel = useRef<HTMLDivElement | null>(null);
 
+  // Mirrors of state, so loadMore can stay identity-stable.
+  const rowsRef = useRef(rows);
+  const hasMoreRef = useRef(hasMore);
+  rowsRef.current = rows;
+  hasMoreRef.current = hasMore;
+
   const loanById = new Map(loans.map(l => [l.loan_id, l]));
   const accountById = new Map(accounts.map(a => [a.id, a]));
 
+  // Guard against overlapping fetches. State updates are async, so `loading`
+  // alone can let two observer callbacks through in the same tick.
+  const inFlight = useRef(false);
+
   const loadMore = useCallback(async () => {
-    if (loading || !hasMore) return;
+    if (inFlight.current || !hasMoreRef.current) return;
+    inFlight.current = true;
     setLoading(true); setErr('');
-    const oldest = rows[rows.length - 1]?.occurred_at;
-    const res = await fetchActivityPage({ before: oldest, limit: 25 });
+
+    const oldest = rowsRef.current[rowsRef.current.length - 1]?.occurred_at;
+    const res = await fetchActivityPage({ before: oldest, limit: PAGE_SIZE });
+
     setLoading(false);
-    if (!res.ok) { setErr(res.error || 'Could not load more activity.'); setHasMore(false); return; }
-    const page = res.data as { rows: ActivityRow[]; hasMore: boolean } | undefined;
-    if (!page) { setHasMore(false); return; }
-    setRows(r => [...r, ...page.rows]);
-    setHasMore(page.hasMore);
-  }, [loading, hasMore, rows]);
+    inFlight.current = false;
+
+    if (!res.ok) {
+      setErr(res.error || 'Could not load more activity.');
+      setHasMore(false);
+      return;
+    }
+    // run() merges the action's object result to the top level, so the rows
+    // arrive as res.rows, NOT res.data.
+    const next = res.rows ?? [];
+    setRows(r => {
+      // Belt and braces against a duplicated page if two calls did overlap.
+      const seen = new Set(r.map(x => x.id));
+      return [...r, ...next.filter(x => !seen.has(x.id))];
+    });
+    setHasMore(!!res.hasMore);
+  }, []);
 
   // Fetch the next page when the bottom of the list scrolls into view.
+  // loadMore is stable (it reads through refs), so the observer is created
+  // once and is not torn down on every page -- which would risk missing the
+  // moment the sentinel comes into view.
   useEffect(() => {
     const el = sentinel.current;
-    if (!el || !hasMore) return;
+    if (!el) return;
     const io = new IntersectionObserver(
       entries => { if (entries[0]?.isIntersecting) void loadMore(); },
-      { root: el.closest('.activity-scroll'), rootMargin: '80px' }
+      { root: el.closest('.activity-scroll'), rootMargin: '200px' }
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [hasMore, loadMore]);
+  }, [loadMore]);
+
+  // If a page arrives and the sentinel is still on screen -- a tall window, or
+  // a short page -- keep going rather than waiting for a scroll that will not
+  // come.
+  useEffect(() => {
+    if (!hasMore || loading) return;
+    const el = sentinel.current;
+    const root = el?.closest('.activity-scroll');
+    if (!el || !root) return;
+    const r = root.getBoundingClientRect();
+    const s = el.getBoundingClientRect();
+    if (s.top <= r.bottom + 200) void loadMore();
+  }, [rows, hasMore, loading, loadMore]);
 
   if (rows.length === 0) {
     return (
@@ -123,7 +165,7 @@ export default function ActivityFeed({
 
         <div ref={sentinel} style={{ height: 1 }} />
 
-        {loading && <p className="muted" style={{ textAlign: 'center', padding: '10px 0', margin: 0 }}>Loading…</p>}
+        {loading && <p className="muted" style={{ textAlign: 'center', padding: '12px 0', margin: 0 }}>Loading more…</p>}
         {err && <div className="alert error" style={{ margin: 10 }}>{err}</div>}
         {!hasMore && !loading && (
           <p className="muted" style={{ textAlign: 'center', padding: '10px 0', margin: 0, fontSize: 12 }}>
@@ -132,6 +174,8 @@ export default function ActivityFeed({
         )}
       </div>
 
+      {/* Scrolling loads the next page on its own; this is only a fallback for
+          browsers without IntersectionObserver, or if a fetch failed. */}
       {hasMore && !loading && (
         <button className="btn secondary" style={{ marginTop: 10 }} onClick={() => void loadMore()}>
           Load more

@@ -37,7 +37,7 @@ export default async function InsightsPage() {
     svc.from('borrowers').select('id, name, email, user_id'),
     svc.from('profiles').select('id, email, full_name, role, active'),
     svc.from('portal_activity').select('id, kind, loan_id, user_id, occurred_at')
-       .order('occurred_at', { ascending: false }).limit(26),
+       .order('occurred_at', { ascending: false }).limit(51),   // 50 + 1 to detect more
   ]);
 
   const loanList = loans ?? [];
@@ -250,8 +250,8 @@ export default async function InsightsPage() {
       <div className="card" style={{ marginTop: 20 }}>
         <h2 style={{ color: 'var(--navy)', marginTop: 0 }}>Recent Activity</h2>
         <ActivityFeed
-          initialRows={actList.slice(0, 25) as any}
-          initialHasMore={actList.length > 25}
+          initialRows={actList.slice(0, 50) as any}
+          initialHasMore={actList.length > 50}
           loans={loanList.map((l: any) => ({ loan_id: l.loan_id, loan_number: l.loan_number, borrower_name: l.borrower_name }))}
           accounts={(profiles ?? []).map((p: any) => ({ id: p.id, email: p.email, name: p.full_name, role: p.role }))}
         />
