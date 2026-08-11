@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 const PHONE = '(845) 828-0731';
 const PHONE_HREF = 'tel:+18458280731';
-const EMAIL = 'Yossi@JayCapitalFunding.com';
+const EMAIL = 'Info@JayCapitalFunding.com';
 // subject prefilled so the message lands looking like an enquiry, not blank
 
 const SERVICES = [

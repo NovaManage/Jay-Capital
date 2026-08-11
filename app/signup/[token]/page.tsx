@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
+import PasswordStrength from '@/components/PasswordStrength';
+import { checkPassword } from '@/lib/password';
 import EmailUs from '@/components/EmailUs';
 import { inspectSignupToken, completePortalSignup } from '@/lib/signup';
 import { browserClient } from '@/lib/supabase-browser';
@@ -29,7 +31,8 @@ export default function SetSignupPasswordPage({ params }: { params: { token: str
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (password.length < 8) { setErr('Please choose a password of at least 8 characters.'); return; }
+    const strength = checkPassword(password, email);
+    if (!strength.ok) { setErr(strength.problems[0]); return; }
     if (password !== confirm) { setErr('The two passwords do not match.'); return; }
     setBusy(true); setErr('');
 
@@ -100,8 +103,8 @@ export default function SetSignupPasswordPage({ params }: { params: { token: str
             <div className="field-wrap" style={{ marginBottom: 14 }}>
               <label htmlFor="pw">Password</label>
               <input id="pw" className="field" type="password" required autoComplete="new-password"
-                placeholder="At least 8 characters"
                 value={password} onChange={e => setPassword(e.target.value)} />
+              <PasswordStrength password={password} email={email} />
             </div>
             <div className="field-wrap" style={{ marginBottom: 14 }}>
               <label htmlFor="pw2">Confirm password</label>

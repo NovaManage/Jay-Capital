@@ -14,7 +14,7 @@ import { sendMail } from '@/lib/mailer';
  * convenience alongside.
  */
 
-const CONTACT_TO = 'Yossi@JayCapitalFunding.com';
+const CONTACT_TO = 'Info@JayCapitalFunding.com';
 
 export async function sendEnquiry(input: {
   name: string; email: string; phone?: string; topic?: string; message: string;

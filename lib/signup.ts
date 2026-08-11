@@ -6,6 +6,7 @@ import { serviceClient } from '@/lib/supabase-server';
 import { sendMail, brandShell, button, rawLink } from '@/lib/mailer';
 import { syncBorrowerLinksForEmail, releaseMismatchedLinks } from '@/lib/borrower-links';
 import { logActivity } from '@/lib/activity';
+import { assertStrongPassword } from '@/lib/password';
 
 /**
  * Borrower self-service signup.
@@ -103,10 +104,6 @@ export async function inspectSignupToken(token: string) {
  */
 export async function completePortalSignup(token: string, password: string) {
   return run(async () => {
-    if (!password || password.length < 8) {
-      throw new Error('Please choose a password of at least 8 characters.');
-    }
-
     const svc = serviceClient();
     const { data: row } = await svc.from('portal_signup_tokens').select('*').eq('token', token).maybeSingle();
     if (!row) throw new Error('This link is not valid. Please request a new one.');
@@ -114,6 +111,8 @@ export async function completePortalSignup(token: string, password: string) {
     if (new Date(row.expires_at) < new Date()) throw new Error('This link has expired. Please request a new one.');
 
     const email: string = row.email;
+    // Checked against the address too, so nobody sets their own email as the password.
+    assertStrongPassword(password, email);
 
     // Borrower records carrying this address. Matching is case-insensitive;
     // the address is verified by the fact they opened this link.

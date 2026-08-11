@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Modal } from '@/components/Modal';
 
-const ADDRESS = 'Yossi@JayCapitalFunding.com';
+const ADDRESS = 'Info@JayCapitalFunding.com';
 
 /**
  * "Email us" that works everywhere.

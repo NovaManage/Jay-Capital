@@ -37,7 +37,6 @@ export default async function InsightsPage() {
     svc.from('borrowers').select('id, name, email, user_id'),
     svc.from('profiles').select('id, email, full_name, role, active'),
     svc.from('portal_activity').select('id, kind, loan_id, user_id, occurred_at')
-       .gte('occurred_at', new Date(Date.now() - 30 * 86400000).toISOString())
        .order('occurred_at', { ascending: false }).limit(26),
   ]);
 
@@ -258,7 +257,7 @@ export default async function InsightsPage() {
         />
 
         <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
-          Last 30 days, newest first, loaded as you scroll. Times are New York time.
+          All activity, newest first, loaded as you scroll. Times are New York time.
           Logged server-side: what was opened and when, with no IP address, device or
           location tracking.
         </p>

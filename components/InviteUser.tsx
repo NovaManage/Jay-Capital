@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { inviteAdminUser } from '@/lib/actions';
 import { Modal, AlertDialog } from '@/components/Modal';
+import PasswordStrength from '@/components/PasswordStrength';
+import { checkPassword } from '@/lib/password';
 
 /**
  * Admin invites a new ADMIN or STAFF user by email (button + popup).
@@ -24,7 +26,10 @@ export default function InviteUser() {
 
   async function submit() {
     if (!email.trim()) { setErr('Email is required.'); return; }
-    if (mode === 'manual' && tempPw.length < 6) { setErr('Temporary password must be at least 6 characters.'); return; }
+    if (mode === 'manual') {
+      const strength = checkPassword(tempPw, email);
+      if (!strength.ok) { setErr(strength.problems[0]); return; }
+    }
     setBusy(true); setErr('');
     try {
       const res = await inviteAdminUser({
@@ -66,7 +71,8 @@ export default function InviteUser() {
             <p className="muted" style={{ margin: 0 }}>They&apos;ll receive an email to set a password and join the portal.</p>
           ) : (
             <>
-              <div className="field-wrap"><label>Temporary Password</label><input className="field" value={tempPw} onChange={e => setTempPw(e.target.value)} placeholder="At least 6 characters" /></div>
+              <div className="field-wrap"><label>Temporary Password</label><input className="field" value={tempPw} onChange={e => setTempPw(e.target.value)} />
+                <PasswordStrength password={tempPw} email={email} /></div>
               <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
                 <input type="checkbox" checked={emailCreds} onChange={e => setEmailCreds(e.target.checked)} />
                 Email these login details to the user

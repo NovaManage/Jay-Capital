@@ -1,6 +1,8 @@
 'use client';
 
 import Logo from '@/components/Logo';
+import PasswordStrength from '@/components/PasswordStrength';
+import { checkPassword } from '@/lib/password';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { browserClient } from '@/lib/supabase-browser';
@@ -35,7 +37,8 @@ export default function SetPasswordPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (password.length < 6) { setError('Please choose a password of at least 6 characters.'); return; }
+    const strength = checkPassword(password, email);
+    if (!strength.ok) { setError(strength.problems[0]); return; }
     if (password !== confirm) { setError('The two passwords do not match.'); return; }
     setBusy(true); setError('');
 
@@ -74,8 +77,8 @@ export default function SetPasswordPage() {
             <div className="field-wrap" style={{ marginBottom: 14 }}>
               <label htmlFor="pw">New password</label>
               <input id="pw" className="field" type="password" value={password}
-                onChange={e => setPassword(e.target.value)} autoComplete="new-password"
-                placeholder="At least 6 characters" required />
+                onChange={e => setPassword(e.target.value)} autoComplete="new-password" required />
+              <PasswordStrength password={password} email={email} />
             </div>
             <div className="field-wrap" style={{ marginBottom: 14 }}>
               <label htmlFor="pw2">Confirm password</label>

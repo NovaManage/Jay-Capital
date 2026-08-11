@@ -235,8 +235,8 @@ export default function StatementView({
           <div>
             <a href="tel:+18458280731" style={{ color: 'var(--navy-med)' }}>(845) 828-0731</a>
             {' · '}
-            <a href="mailto:Yossi@JayCapitalFunding.com" style={{ color: 'var(--navy-med)' }}>
-              Yossi@JayCapitalFunding.com
+            <a href="mailto:Info@JayCapitalFunding.com" style={{ color: 'var(--navy-med)' }}>
+              Info@JayCapitalFunding.com
             </a>
           </div>
         </div>

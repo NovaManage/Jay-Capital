@@ -38,8 +38,10 @@ export function friendlyMessage(e: any): string {
   if (/ECONNREFUSED|ETIMEDOUT|ENOTFOUND|EDNS/i.test(raw)) {
     return 'Could not reach the mail server. Check SMTP_HOST and SMTP_PORT, then try again.';
   }
+  // Supabase's own minimum is shorter than ours; our policy message is the
+  // one that matches what the app actually enforces.
   if (/Password should be at least|password.*6 characters/i.test(raw)) {
-    return 'That password is too short. Use at least 6 characters.';
+    return 'That password does not meet the requirements. Use at least 12 characters with a mix of upper case, lower case, numbers and a symbol.';
   }
   if (/Unable to validate email address|invalid format/i.test(raw)) {
     return 'That email address does not look valid. Please check it and try again.';

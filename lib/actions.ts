@@ -6,6 +6,7 @@ import { serverClient, serviceClient } from '@/lib/supabase-server';
 import { syncBorrowerLinksForEmail } from '@/lib/borrower-links';
 import { randomBytes } from 'crypto';
 import { sendMail, brandShell, button, rawLink } from '@/lib/mailer';
+import { assertStrongPassword } from '@/lib/password';
 
 async function requireAdmin() {
   const supabase = serverClient();
@@ -686,6 +687,8 @@ export async function inviteAdminUser(opts: {
       userId = await createUserAndEmailInvite(svc, opts.email, opts.fullName, site, 'team');
       message = `Invitation emailed to ${opts.email}.`;
     } else {
+      // A temporary password is a real password until they change it.
+      assertStrongPassword(opts.tempPassword || '', opts.email);
       const { data, error } = await svc.auth.admin.createUser({
         email: opts.email, password: opts.tempPassword, email_confirm: true,
         user_metadata: { full_name: opts.fullName },
@@ -738,6 +741,8 @@ export async function createBorrowerUser(opts: {
       userId = await createUserAndEmailInvite(svc, opts.email, opts.fullName, site, 'borrower');
       message = `Invitation emailed to ${opts.email}.`;
     } else {
+      // A temporary password is a real password until they change it.
+      assertStrongPassword(opts.tempPassword || '', opts.email);
       const { data, error } = await svc.auth.admin.createUser({
         email: opts.email, password: opts.tempPassword, email_confirm: true,
         user_metadata: { full_name: opts.fullName },

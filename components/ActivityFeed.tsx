@@ -28,11 +28,11 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 /**
- * Thirty days of activity in a fixed-height, scrollable panel.
+ * All recorded activity, in a fixed-height scrollable panel.
  *
- * Rows arrive a page at a time as you scroll. portal_activity only grows, and
- * every borrower view adds to it, so fetching a month in one query would get
- * steadily slower for a list that only ever shows a screenful.
+ * Rows arrive a page at a time as you scroll, so the query cost stays flat
+ * however much history builds up -- portal_activity only grows, and every
+ * borrower view adds to it.
  */
 export default function ActivityFeed({
   initialRows, initialHasMore, loans, accounts,
@@ -55,7 +55,7 @@ export default function ActivityFeed({
     if (loading || !hasMore) return;
     setLoading(true); setErr('');
     const oldest = rows[rows.length - 1]?.occurred_at;
-    const res = await fetchActivityPage({ before: oldest, days: 30, limit: 25 });
+    const res = await fetchActivityPage({ before: oldest, limit: 25 });
     setLoading(false);
     if (!res.ok) { setErr(res.error || 'Could not load more activity.'); setHasMore(false); return; }
     const page = res.data as { rows: ActivityRow[]; hasMore: boolean } | undefined;
@@ -79,7 +79,7 @@ export default function ActivityFeed({
   if (rows.length === 0) {
     return (
       <p className="muted" style={{ margin: 0 }}>
-        No activity in the last 30 days.
+        No activity recorded yet.
       </p>
     );
   }
@@ -127,7 +127,7 @@ export default function ActivityFeed({
         {err && <div className="alert error" style={{ margin: 10 }}>{err}</div>}
         {!hasMore && !loading && (
           <p className="muted" style={{ textAlign: 'center', padding: '10px 0', margin: 0, fontSize: 12 }}>
-            End of the last 30 days.
+            That&rsquo;s everything &mdash; {rows.length} record{rows.length === 1 ? '' : 's'}.
           </p>
         )}
       </div>

@@ -6,13 +6,13 @@ import { serverClient } from '@/lib/supabase-server';
 /**
  * A page of recent activity for the admin insights feed.
  *
- * Paged rather than fetched whole: this table only grows, and every borrower
- * view adds a row. Loading a month of it in one go would get slower every
- * week for a list that only ever shows twenty-odd rows at a time.
+ * Covers all history. Paged rather than fetched whole: this table only grows
+ * and every borrower view adds a row, so loading it all at once would get
+ * slower every week for a list that only ever shows a screenful. Paging keeps
+ * the cost flat no matter how much history accumulates.
  */
 export async function fetchActivityPage(opts: {
   before?: string | null;   // ISO cursor: fetch rows older than this
-  days?: number;
   limit?: number;
 } = {}) {
   return run(async () => {
@@ -25,13 +25,10 @@ export async function fetchActivityPage(opts: {
     const { data: me } = await supabase.from('profiles').select('role').eq('id', user?.id ?? '').single();
     if (me?.role !== 'admin' && me?.role !== 'staff') throw new Error('Admin or staff only.');
 
-    const days = opts.days ?? 30;
     const limit = Math.min(opts.limit ?? 25, 100);
-    const since = new Date(Date.now() - days * 86400000).toISOString();
 
     let q = supabase.from('portal_activity')
       .select('id, kind, loan_id, user_id, occurred_at')
-      .gte('occurred_at', since)
       .order('occurred_at', { ascending: false })
       .limit(limit + 1);           // one extra tells us whether more remain
 
