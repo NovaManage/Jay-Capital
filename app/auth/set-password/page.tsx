@@ -2,6 +2,7 @@
 
 import Logo from '@/components/Logo';
 import PasswordStrength from '@/components/PasswordStrength';
+import PasswordField from '@/components/PasswordField';
 import { checkPassword } from '@/lib/password';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -76,14 +77,12 @@ export default function SetPasswordPage() {
             )}
             <div className="field-wrap" style={{ marginBottom: 14 }}>
               <label htmlFor="pw">New password</label>
-              <input id="pw" className="field" type="password" value={password}
-                onChange={e => setPassword(e.target.value)} autoComplete="new-password" required />
+              <PasswordField id="pw" required value={password} onChange={setPassword} />
               <PasswordStrength password={password} email={email} />
             </div>
             <div className="field-wrap" style={{ marginBottom: 14 }}>
               <label htmlFor="pw2">Confirm password</label>
-              <input id="pw2" className="field" type="password" value={confirm}
-                onChange={e => setConfirm(e.target.value)} autoComplete="new-password" required />
+              <PasswordField id="pw2" required value={confirm} onChange={setConfirm} />
             </div>
             {error && <div className="alert error">{error}</div>}
             <button className="btn" style={{ width: '100%' }} disabled={busy || done} type="submit">

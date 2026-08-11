@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
 import PasswordStrength from '@/components/PasswordStrength';
+import PasswordField from '@/components/PasswordField';
 import { checkPassword } from '@/lib/password';
 import EmailUs from '@/components/EmailUs';
 import { inspectSignupToken, completePortalSignup } from '@/lib/signup';
@@ -102,14 +103,12 @@ export default function SetSignupPasswordPage({ params }: { params: { token: str
             </p>
             <div className="field-wrap" style={{ marginBottom: 14 }}>
               <label htmlFor="pw">Password</label>
-              <input id="pw" className="field" type="password" required autoComplete="new-password"
-                value={password} onChange={e => setPassword(e.target.value)} />
+              <PasswordField id="pw" required value={password} onChange={setPassword} />
               <PasswordStrength password={password} email={email} />
             </div>
             <div className="field-wrap" style={{ marginBottom: 14 }}>
               <label htmlFor="pw2">Confirm password</label>
-              <input id="pw2" className="field" type="password" required autoComplete="new-password"
-                value={confirm} onChange={e => setConfirm(e.target.value)} />
+              <PasswordField id="pw2" required value={confirm} onChange={setConfirm} />
             </div>
             {err && <div className="alert error">{err}</div>}
             <button className="btn" style={{ width: '100%' }} disabled={busy} type="submit">

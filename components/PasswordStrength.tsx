@@ -15,7 +15,7 @@ export default function PasswordStrength({
 }: { password: string; email?: string }) {
   if (!password) {
     return (
-      <p className="muted" style={{ fontSize: 12, margin: '-6px 0 0' }}>
+      <p className="muted" style={{ fontSize: 12, margin: '4px 0 0' }}>
         At least {MIN_LENGTH} characters, mixing upper case, lower case, numbers and a
         symbol — or a longer passphrase.
       </p>
@@ -27,7 +27,7 @@ export default function PasswordStrength({
   const colour = colours[score];
 
   return (
-    <div style={{ margin: '-6px 0 0' }}>
+    <div style={{ margin: '6px 0 0' }}>
       <div style={{ display: 'flex', gap: 4, marginBottom: 6 }} aria-hidden="true">
         {[0, 1, 2, 3].map(i => (
           <div

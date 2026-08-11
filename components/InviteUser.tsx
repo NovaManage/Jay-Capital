@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { inviteAdminUser } from '@/lib/actions';
 import { Modal, AlertDialog } from '@/components/Modal';
 import PasswordStrength from '@/components/PasswordStrength';
+import PasswordField from '@/components/PasswordField';
 import { checkPassword } from '@/lib/password';
 
 /**
@@ -71,7 +72,7 @@ export default function InviteUser() {
             <p className="muted" style={{ margin: 0 }}>They&apos;ll receive an email to set a password and join the portal.</p>
           ) : (
             <>
-              <div className="field-wrap"><label>Temporary Password</label><input className="field" value={tempPw} onChange={e => setTempPw(e.target.value)} />
+              <div className="field-wrap"><label>Temporary Password</label><PasswordField value={tempPw} onChange={setTempPw} />
                 <PasswordStrength password={tempPw} email={email} /></div>
               <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
                 <input type="checkbox" checked={emailCreds} onChange={e => setEmailCreds(e.target.checked)} />

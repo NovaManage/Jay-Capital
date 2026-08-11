@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createBorrowerUser } from '@/lib/actions';
 import { Modal, AlertDialog } from '@/components/Modal';
 import PasswordStrength from '@/components/PasswordStrength';
+import PasswordField from '@/components/PasswordField';
 import { checkPassword } from '@/lib/password';
 
 /**
@@ -79,7 +80,7 @@ export default function AddBorrowerModal({
             <>
               <div className="field-wrap">
                 <label>Temporary Password</label>
-                <input className="field" value={tempPw} onChange={e => setTempPw(e.target.value)} />
+                <PasswordField value={tempPw} onChange={setTempPw} />
                 <PasswordStrength password={tempPw} email={email} />
               </div>
               <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>

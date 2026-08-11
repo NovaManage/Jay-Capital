@@ -12,7 +12,7 @@
  * can be bypassed.
  */
 
-export const MIN_LENGTH = 12;
+export const MIN_LENGTH = 8;
 
 /** Passwords and stems common enough to be guessed early in any attack. */
 const COMMON = [
@@ -21,7 +21,21 @@ const COMMON = [
   'abc123', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm', 'changeme', 'secret',
   'capital', 'jaycapital', 'funding', 'jaycapitalfunding', 'loan', 'mortgage',
   'portal', 'statement', 'borrower',
+  // season/month + year is one of the most predictable patterns there is
+  'summer', 'winter', 'spring', 'autumn',
+  'january', 'february', 'march', 'april', 'june', 'july', 'august',
+  'september', 'october', 'november', 'december',
 ];
+
+/**
+ * Undo common character substitutions before matching the blocklist.
+ * Without this, 'Passw0rd!' sails through: stripping non-letters turns it into
+ * 'passwrd', which matches nothing.
+ */
+const LEET: Record<string, string> = {
+  '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '8': 'b', '9': 'g',
+  '@': 'a', '$': 's', '!': 'i', '+': 't',
+};
 
 const KEYBOARD_RUNS = [
   'qwertyuiop', 'asdfghjkl', 'zxcvbnm', '1234567890', 'abcdefghijklmnopqrstuvwxyz',
@@ -46,9 +60,12 @@ function hasRun(lower: string, minRun = 4): boolean {
   return false;
 }
 
-/** Strip digits people tack on, so "Password2026!" still reads as "password". */
+/**
+ * Reduce a password to the word underneath it: undo leet substitutions, then
+ * drop what is left. "Password2026!" and "P@ssw0rd" both become "password".
+ */
 function stem(lower: string): string {
-  return lower.replace(/[^a-z]/g, '');
+  return [...lower].map(c => LEET[c] ?? c).join('').replace(/[^a-z]/g, '');
 }
 
 export function checkPassword(password: string, email?: string): PasswordCheck {
@@ -100,13 +117,13 @@ export function checkPassword(password: string, email?: string): PasswordCheck {
 
   // A short password repeated is still short: "abcabcabcabc".
   const unique = new Set(pw).size;
-  if (pw.length >= MIN_LENGTH && unique <= 4) {
+  if (pw.length >= MIN_LENGTH && unique <= 3) {
     problems.push('Use a wider variety of characters.');
   }
 
   let score = 0;
-  if (pw.length >= 8) score++;
   if (pw.length >= MIN_LENGTH) score++;
+  if (pw.length >= 12) score++;
   if (classes >= 3) score++;
   if (pw.length >= 16 || (classes === 4 && pw.length >= 14)) score++;
   if (problems.length) score = Math.min(score, 1);

@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
+import PasswordField from '@/components/PasswordField';
 import { browserClient } from '@/lib/supabase-browser';
 import { requestPasswordReset } from '@/lib/signup';
 
@@ -74,8 +75,8 @@ function LoginForm() {
           {mode === 'signin' && (
             <div className="field-wrap" style={{ marginBottom: 14 }}>
               <label htmlFor="password">Password</label>
-              <input id="password" className="field" type="password" required autoComplete="current-password"
-                value={password} onChange={e => setPassword(e.target.value)} />
+              <PasswordField id="password" required autoComplete="current-password"
+                value={password} onChange={setPassword} />
             </div>
           )}
 
