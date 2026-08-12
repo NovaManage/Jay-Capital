@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { updateUserProfile, setUserActive, sendUserPasswordReset, deleteUser } from '@/lib/actions';
+import { updateUserProfile, setUserActive, sendUserPasswordReset, deleteUser, resendInvitation } from '@/lib/actions';
 import { Modal, ConfirmDialog, AlertDialog } from '@/components/Modal';
 
 export interface UserRow {
   id: string; email: string; full_name: string | null;
   role: 'admin' | 'staff' | 'borrower'; active: boolean;
+  activatedAt?: string | null;
 }
 
 export default function UserRowControls({ user, isSelf }: { user: UserRow; isSelf: boolean }) {
@@ -45,6 +46,12 @@ export default function UserRowControls({ user, isSelf }: { user: UserRow; isSel
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button className="btn secondary" disabled={busy} onClick={() => { setErr(''); setEditOpen(true); }}>Edit</button>
         <button className="btn secondary" disabled={busy} onClick={() => setConfirmReset(true)}>Reset password</button>
+        {!user.activatedAt && (
+          <button className="btn secondary" disabled={busy}
+            onClick={async () => { setBusy(true); done(await resendInvitation(user.id), 'Could not resend the invitation.'); }}>
+            Resend invite
+          </button>
+        )}
         {!isSelf && (user.active
           ? <button className="btn secondary" disabled={busy} onClick={() => setConfirmOff(true)}>Inactivate</button>
           : <button className="btn" disabled={busy} onClick={async () => { setBusy(true); done(await setUserActive(user.id, true), 'Could not reactivate.'); }}>Reactivate</button>

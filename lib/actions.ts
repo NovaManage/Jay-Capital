@@ -561,6 +561,49 @@ export async function updateUserProfile(userId: string, opts: { fullName: string
   });
 }
 
+/**
+ * Send the set-password invitation again.
+ *
+ * Uses generateLink, so it works whether the original was never opened or has
+ * expired -- Supabase recovery links are single-use and time-limited, and the
+ * common support request is simply "I never got it".
+ */
+export async function resendInvitation(userId: string) {
+  return run(async () => {
+    await requireAdmin();
+    const svc = serviceClient();
+    const site = process.env.NEXT_PUBLIC_SITE_URL || '';
+
+    const { data: profile } = await svc.from('profiles')
+      .select('email, full_name, activated_at').eq('id', userId).maybeSingle();
+    if (!profile?.email) throw new Error('That user has no email address on file.');
+
+    const { data: link, error } = await svc.auth.admin.generateLink({
+      type: 'recovery', email: profile.email,
+      options: { redirectTo: site ? `${site}/auth/callback?next=/auth/set-password` : undefined },
+    });
+    if (error) throw new Error(error.message);
+    const action = (link as any)?.properties?.action_link;
+    if (!action) throw new Error('Could not generate the invitation link.');
+
+    await sendMail({
+      to: profile.email,
+      subject: 'Set up your Jay Capital Funding account',
+      html: brandShell(
+        `<p style="margin:0 0 14px">Hi ${profile.full_name || 'there'},</p>
+         <p style="margin:0 0 14px">Here is a fresh link to choose a password and finish setting up your Jay Capital Funding login.</p>
+         ${button(action, 'Set my password')}
+         ${rawLink(action)}
+         <p style="margin:14px 0 0;color:#6B7A90;font-size:13px">This replaces any earlier link. If you weren&rsquo;t expecting it, you can ignore this email.</p>`
+      ),
+    });
+
+    await svc.from('profiles').update({ invited_at: new Date().toISOString() }).eq('id', userId);
+    revalidatePath('/admin/users');
+    return { message: `Invitation re-sent to ${profile.email}.` };
+  });
+}
+
 export async function setUserActive(userId: string, active: boolean) {
   return run(async () => {
     const supabase = await requireAdmin();
@@ -651,6 +694,8 @@ async function createUserAndEmailInvite(
   const intro = kind === 'borrower'
     ? 'An account has been created for you on the Jay Capital Funding borrower portal, where you can view your loan statements and construction draws.'
     : 'You have been given access to the Jay Capital Funding portal.';
+
+  await svc.from('profiles').update({ invited_at: new Date().toISOString() }).eq('id', userId);
 
   await sendMail({
     to: email,

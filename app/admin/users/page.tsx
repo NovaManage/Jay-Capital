@@ -2,6 +2,7 @@ import { serverClient } from '@/lib/supabase-server';
 import Link from 'next/link';
 import UserRowControls from '@/components/UserRowControls';
 import InviteUser from '@/components/InviteUser';
+import InviteStatus from '@/components/InviteStatus';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,9 @@ export default async function UsersPage() {
     return <div className="wrap"><div className="card"><div className="alert error">Admin only.</div></div></div>;
   }
   const { data: profiles } = await supabase
-    .from('profiles').select('id, email, full_name, role, active').order('email');
+    .from('profiles')
+    .select('id, email, full_name, role, active, invited_at, activated_at, last_seen_at')
+    .order('email');
 
   return (
     <div className="wrap">
@@ -30,7 +33,7 @@ export default async function UsersPage() {
         </p>
         <div className="tablescroll">
           <table className="bordered">
-            <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Access</th><th>Invitation</th><th>Actions</th></tr></thead>
             <tbody>
               {(profiles ?? []).map((p: any) => (
                 <tr key={p.id}>
@@ -38,9 +41,14 @@ export default async function UsersPage() {
                   <td>{p.full_name ?? ''}</td>
                   <td><span className={`badge ${p.role}`}>{p.role}</span></td>
                   <td><span className={`badge ${p.active === false ? 'borrower' : 'staff'}`}>{p.active === false ? 'inactive' : 'active'}</span></td>
+                  <td style={{ minWidth: 190 }}><InviteStatus
+                    invitedAt={p.invited_at} activatedAt={p.activated_at} lastSeenAt={p.last_seen_at} /></td>
                   <td>
                     <UserRowControls
-                      user={{ id: p.id, email: p.email, full_name: p.full_name, role: p.role, active: p.active !== false }}
+                      user={{
+                        id: p.id, email: p.email, full_name: p.full_name, role: p.role,
+                        active: p.active !== false, activatedAt: p.activated_at,
+                      }}
                       isSelf={p.id === user?.id}
                     />
                   </td>

@@ -5,7 +5,7 @@ import { money, pct, fmtDate, firstOfMonth, monthName, clampMonth, statementMont
 import { drawInterest, buildStatement, type Draw as EngineDraw } from '@/lib/interest';
 import { buildLedger, type PaymentRow, type AllocationRow } from '@/lib/ledger';
 
-export const SERVICER = 'Jay Capital Funding';
+export const SERVICER = 'Jay Capital Funding Inc.';
 
 export interface StatementData {
   loan_id?: string;
@@ -48,7 +48,8 @@ export default function StatementView({
 
   // A statement's charges fall due on its own date, so once that date has
   // passed with a balance outstanding, this statement is late.
-  const isLate = ledger.amountDue > 0.005 && asOf <= firstOfMonth(todayInAppTz());
+  const isLate = ledger.amountDue > 0.005 && !ledger.deferredToNext
+    && asOf <= firstOfMonth(todayInAppTz());
 
   const go = (delta: number) => setAsOf(cur => clampMonth(firstOfMonth(cur, delta), loan.closing_date));
 
@@ -132,8 +133,25 @@ export default function StatementView({
             <div className="row"><span className="k">Payments Received</span><span className="v">{ledger.paymentsThisPeriod > 0 ? `(${money(ledger.paymentsThisPeriod)})` : money(0)}</span></div>
             <div className="row"><span className="k">Previous Open Balance</span><span className="v">{money(ledger.previousOpenBalance)}</span></div>
             <div className="row"><span className="k">Current Charges</span><span className="v">{money(ledger.currentCharge)}</span></div>
+            {ledger.currentPeriods.length > 1 && ledger.currentPeriods.map(c => (
+              <div className="row" key={c.periodMonth} style={{ paddingLeft: 14 }}>
+                <span className="k" style={{ fontWeight: 400, color: 'var(--muted)' }}>
+                  &mdash; {c.label} interest
+                </span>
+                <span className="v" style={{ color: 'var(--muted)' }}>{money(c.charge)}</span>
+              </div>
+            ))}
             <div className="row due"><span className="k">Amount Due</span><span className="v">{money(ledger.amountDue)}</span></div>
           </div>
+          {ledger.deferredToNext && (
+            <div style={{
+              background: 'var(--pale)', color: 'var(--navy)',
+              padding: '10px 14px', fontSize: 13.5, lineHeight: 1.55,
+            }}>
+              Nothing is due yet. Interest for your closing month is first billed on your
+              next statement, together with a full month.
+            </div>
+          )}
           {isLate && (
             <div style={{
               background: '#FDECEA', color: 'var(--danger)', fontWeight: 600,

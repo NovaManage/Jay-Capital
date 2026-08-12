@@ -206,7 +206,7 @@ export default function LandingPage() {
             <a href="#contact">{EMAIL}</a>
             <Link href="/login">Borrower Portal</Link>
           </div>
-          <div>&copy; {todayInAppTz().getFullYear()} Jay Capital Funding</div>
+          <div>&copy; {todayInAppTz().getFullYear()} Jay Capital Funding Inc.</div>
         </div>
       </footer>
     </div>

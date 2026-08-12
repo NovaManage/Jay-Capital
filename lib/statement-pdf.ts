@@ -5,7 +5,7 @@ import { money, pct, fmtDate, statementPeriod, borrowerDisplayName } from '@/lib
 import { buildLedger, type PaymentRow, type AllocationRow } from '@/lib/ledger';
 import type { StatementLoan, StatementDraw } from '@/lib/statement-html';
 
-export const SERVICER = 'Jay Capital Funding';
+export const SERVICER = 'Jay Capital Funding Inc.';
 export interface StatementExtras {
   payments?: PaymentRow[];
   allocations?: AllocationRow[];
@@ -165,6 +165,13 @@ export async function statementPDF(
     ['Previous Open Balance', money(ledger.previousOpenBalance)],
     ['Current Charges', money(ledger.currentCharge)],
   ];
+  // When a statement bills two periods -- the first billed one, carrying the
+  // deferred closing month -- show what makes up the figure.
+  if (ledger.currentPeriods.length > 1) {
+    for (const c of ledger.currentPeriods) {
+      rightRows.push([`   ${c.label} interest`, money(c.charge)]);
+    }
+  }
 
   const ROW = 16;
   ensure(Math.max(leftRows.length, rightRows.length + 2) * ROW + 20);
@@ -195,8 +202,15 @@ export async function statementPDF(
   text('Amount Due', rightX + 10, bandY + 8, 12, bold, NAVY);
   rightText(money(ledger.amountDue), rightR - 10, bandY + 8, 12, bold, NAVY);
   const rightEnd = bandY - 4;
+  let rightEndAdjust = 0;
 
-  y = Math.min(leftEnd, rightEnd) - 15;
+  if (ledger.deferredToNext) {
+    text('Nothing due yet — closing-month interest is billed on your next statement.',
+      rightX, bandY - 12, 8, font, MUTED);
+    rightEndAdjust = 14;
+  }
+
+  y = Math.min(leftEnd, rightEnd - rightEndAdjust) - 15;
 
   // ---- Draw table: THIS PERIOD ONLY
   ensure(58);
@@ -299,7 +313,7 @@ export async function statementPDF(
   // an email -- a statement gets printed, forwarded and filed away from the
   // message it arrived in.
   const askLine = `Questions about this statement? Call ${BRAND.phone} or email ${BRAND.email}`;
-  const footLine = `${BRAND.company}  ·  ${BRAND.address}`;
+  const footLine = `${BRAND.legal}  ·  ${BRAND.address}`;
   pages.forEach((p, i) => {
     p.drawRectangle({ x: M, y: 64, width: PW - 2 * M, height: 0.8, color: GOLD });
     const aw = font.widthOfTextAtSize(askLine, 7.5);

@@ -12,7 +12,10 @@ import { EMAIL_LOGO_BASE64, EMAIL_LOGO_CID } from '@/lib/email-logo';
  */
 
 export const BRAND = {
+  /** Marketing name, for headings and prose. */
   company: 'Jay Capital Funding',
+  /** Registered name, for footers, statements and anywhere formal. */
+  legal: 'Jay Capital Funding Inc.',
   address: '33 Downtown Drive, Suite 501, Monsey, NY 10952',
   phone: '(845) 828-0731',
   email: 'Info@JayCapitalFunding.com',
@@ -48,7 +51,7 @@ export function brandShell(inner: string): string {
       <div style="height:2px;background:${GOLD};border-radius:2px;margin:14px 0 20px"></div>
       ${inner}
       <div style="border-top:1px solid #E4EAF3;margin:22px 0 0;padding-top:14px;color:${MUTED};font-size:12px;line-height:1.7">
-        <b style="color:${NAVY}">${BRAND.company}</b><br/>
+        <b style="color:${NAVY}">${BRAND.legal}</b><br/>
         ${BRAND.address}<br/>
         <a href="tel:+18458280731" style="color:${MUTED};text-decoration:none">${BRAND.phone}</a>
         &nbsp;&middot;&nbsp;

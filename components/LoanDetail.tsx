@@ -175,7 +175,12 @@ export default function LoanDetail({
             <a className="btn" href={pdfHref} target="_blank" rel="noopener">Download PDF</a>
           </div>
         </div>
-        <p className="muted" style={{ marginTop: 0 }}>Statement date {fmtDate(stmtDate)}{stmt.prepaidAtClosing ? ' · closing month, interest prepaid at closing' : ''}</p>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Statement date {fmtDate(stmtDate)}
+          {ledger.deferredToNext && ' · nothing billed yet — closing-month interest defers to the next statement'}
+          {ledger.currentPeriods.length > 1 &&
+            ` · bills ${ledger.currentPeriods.map(c => c.label).join(' + ')}`}
+        </p>
         <div className="summary">
           <div className="row"><span className="k">Total disbursed (as of period)</span><span className="v">{money(stmt.totalDisbursed)}</span></div>
           <div className="row"><span className="k">Total draws this period</span><span className="v">{money(stmt.periodDrawTotal)}</span></div>
@@ -183,6 +188,7 @@ export default function LoanDetail({
           <div className="row"><span className="k">Interest accrued this period</span><span className="v">{money(stmt.periodDrawInterest)}</span></div>
           <div className="row"><span className="k">Previous balance</span><span className="v">{money(ledger.previousBalance)}</span></div>
           <div className="row"><span className="k">Payments received</span><span className="v">{ledger.paymentsThisPeriod > 0 ? `(${money(ledger.paymentsThisPeriod)})` : money(0)}</span></div>
+          <div className="row"><span className="k">Previous open balance</span><span className="v">{money(ledger.previousOpenBalance)}</span></div>
           <div className="row"><span className="k">Current charges</span><span className="v">{money(ledger.currentCharge)}</span></div>
           <div className="row due"><span className="k">Amount Due</span><span className="v">{money(ledger.amountDue)}</span></div>
         </div>

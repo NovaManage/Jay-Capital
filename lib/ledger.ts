@@ -66,6 +66,12 @@ export interface Ledger {
   previousOpenBalance: number;
   amountDue: number;
   priorUnpaid: PeriodCharge[];
+  /** The period(s) this statement bills. More than one on the first billed
+   *  statement, which carries the deferred closing month as well. */
+  currentPeriods: PeriodCharge[];
+  /** True on a statement that bills nothing because the closing month's
+   *  interest has been deferred to the next one. */
+  deferredToNext: boolean;
   paymentsInPeriod: PaymentRow[];
   unapplied: number;
 }
@@ -116,10 +122,16 @@ export function buildLedger(
   const periodStart = periodMonth;
   const periodEnd = periodEndOf(periodMonth);
 
-  const priorPeriods = periodsThrough(loan.closing_date, periodMonth)
-    .filter(p => p < periodMonth);
+  // A statement bills every period whose due date IS this statement's date.
+  // Normally that is just the month it covers, but the first billed statement
+  // also carries the deferred closing month.
+  const statementMonth = firstOfMonth(statementDate);
+  const allPeriods = periodsThrough(loan.closing_date, periodMonth);
+  const currentPeriodMonths = allPeriods.filter(p => dueDateFor(p, loan.closing_date) === statementMonth);
+  const priorPeriods = allPeriods.filter(p => dueDateFor(p, loan.closing_date) < statementMonth);
 
-  const currentCharge = chargeForPeriod(loan, draws, periodMonth);
+  const currentCharge = currentPeriodMonths
+    .reduce((sum, p) => sum + chargeForPeriod(loan, draws, p), 0);
 
   // ---- date-based running balance
   const paidBefore = payments
@@ -150,13 +162,25 @@ export function buildLedger(
     paidByPeriod.set(key, (paidByPeriod.get(key) ?? 0) + Number(a.amount));
   }
 
+  const currentPeriods: PeriodCharge[] = currentPeriodMonths.map(p => {
+    const charge = chargeForPeriod(loan, draws, p);
+    const paid = paidByPeriod.get(p) ?? 0;
+    return {
+      periodMonth: p, label: monthName(p),
+      statementDate: dueDateFor(p, loan.closing_date),
+      statementLabel: monthName(dueDateFor(p, loan.closing_date)),
+      charge, paid, balance: charge - paid, inProgress: false,
+    };
+  });
+
   const priorUnpaid: PeriodCharge[] = priorPeriods
     .map(p => {
       const charge = chargeForPeriod(loan, draws, p);
       const paid = paidByPeriod.get(p) ?? 0;
       return {
         periodMonth: p, label: monthName(p),
-        statementDate: firstOfMonth(p, 1), statementLabel: monthName(firstOfMonth(p, 1)),
+        statementDate: dueDateFor(p, loan.closing_date),
+        statementLabel: monthName(dueDateFor(p, loan.closing_date)),
         charge, paid, balance: charge - paid, inProgress: false,
       };
     })
@@ -173,6 +197,8 @@ export function buildLedger(
     periodMonth,
     periodLabel: monthName(periodMonth),
     currentCharge,
+    currentPeriods,
+    deferredToNext: currentPeriodMonths.length === 0,
     previousBalance,
     paymentsThisPeriod,
     previousOpenBalance,
@@ -188,8 +214,12 @@ export function buildLedger(
  * which is also the date of the statement that bills it. August's interest is
  * billed on the 1 September statement and is late from that day.
  */
-export function dueDateFor(periodMonth: string): string {
-  return firstOfMonth(periodMonth, 1);
+export function dueDateFor(periodMonth: string, closingDate: string): string {
+  // The closing month is not billed on the very next statement. A borrower who
+  // closes 6/15 and draws 6/25 gets a full month before anything is owed, so
+  // that stub interest is first due 8/1 -- billed alongside July's full month.
+  const closingMonth = firstOfMonth(closingDate);
+  return firstOfMonth(periodMonth, periodMonth === closingMonth ? 2 : 1);
 }
 
 /**
@@ -219,14 +249,16 @@ export function pastDueAsOf(
   }
 
   // Periods whose due date is on or before today.
-  const lastDue = firstOfMonth(today, -1);
-  return periodsThrough(loan.closing_date, lastDue)
+  const thisMonth = firstOfMonth(today);
+  return periodsThrough(loan.closing_date, firstOfMonth(today, -1))
+    .filter(p => dueDateFor(p, loan.closing_date) <= thisMonth)
     .map(p => {
       const charge = chargeForPeriod(loan, draws, p);
       const paid = paidByPeriod.get(p) ?? 0;
       return {
         periodMonth: p, label: monthName(p),
-        statementDate: dueDateFor(p), statementLabel: monthName(dueDateFor(p)),
+        statementDate: dueDateFor(p, loan.closing_date),
+        statementLabel: monthName(dueDateFor(p, loan.closing_date)),
         charge, paid, balance: charge - paid, inProgress: false,
       };
     })
@@ -261,7 +293,8 @@ export function openCharges(
       const paid = paidByPeriod.get(p) ?? 0;
       return {
         periodMonth: p, label: monthName(p),
-        statementDate: firstOfMonth(p, 1), statementLabel: monthName(firstOfMonth(p, 1)),
+        statementDate: dueDateFor(p, loan.closing_date),
+        statementLabel: monthName(dueDateFor(p, loan.closing_date)),
         charge, paid, balance: charge - paid, inProgress: p >= currentPeriod,
       };
     })
