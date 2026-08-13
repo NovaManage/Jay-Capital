@@ -11,6 +11,7 @@ export interface ActivityRow {
   loan_id: string | null;
   user_id: string | null;
   occurred_at: string;
+  detail?: string | null;
 }
 
 export interface ActivityLoan { loan_id: string; loan_number: string; borrower_name: string }
@@ -19,15 +20,44 @@ export interface ActivityAccount { id: string; email: string; name: string | nul
 const PAGE_SIZE = 50;
 
 const KIND_LABEL: Record<string, string> = {
-  portal_view: 'Opened portal',
-  pdf_download: 'Downloaded PDF',
-  statement_month: 'Viewed statement',
   sign_in: 'Signed in',
   account_created: 'Created account',
   email_changed: 'Changed email',
-  statement_emailed: 'Statement emailed',
-  statement_view: 'Statement link',
+  password_changed: 'Changed password',
+  portal_view: 'Opened portal',
+  statement_view: 'Viewed statement',
+  pdf_download: 'Downloaded statement PDF',
+  loan_created: 'Created loan',
+  loan_updated: 'Edited loan',
+  loan_deleted: 'Deleted loan',
+  loan_status_changed: 'Changed loan status',
+  draw_added: 'Added draw',
+  draw_updated: 'Edited draw',
+  draw_deleted: 'Deleted draw',
+  payment_added: 'Recorded payment',
+  payment_updated: 'Edited payment',
+  payment_deleted: 'Deleted payment',
+  statement_emailed: 'Emailed statement',
+  user_invited: 'Invited user',
+  user_updated: 'Edited user',
+  user_active_changed: 'Changed user access',
+  user_deleted: 'Deleted user',
+  password_reset_sent: 'Sent password reset',
+  borrower_login_created: 'Created borrower login',
+  lender_added: 'Added lender',
+  lender_updated: 'Edited lender',
+  lender_active_changed: 'Changed lender status',
+  loans_imported: 'Imported loans',
 };
+
+/** Money and record changes are worth spotting at a glance. */
+const WRITE_KINDS = new Set([
+  'loan_created', 'loan_updated', 'loan_deleted', 'loan_status_changed',
+  'draw_added', 'draw_updated', 'draw_deleted',
+  'payment_added', 'payment_updated', 'payment_deleted',
+  'user_deleted', 'user_active_changed', 'borrower_login_created',
+  'lender_added', 'lender_updated', 'loans_imported',
+]);
 
 /**
  * All recorded activity, in a fixed-height scrollable panel.
@@ -130,7 +160,7 @@ export default function ActivityFeed({
     <>
       <div className="activity-scroll tablescroll">
         <table className="bordered">
-          <thead><tr><th>When</th><th>Who</th><th>What</th><th>Loan</th></tr></thead>
+          <thead><tr><th>When</th><th>Who</th><th>What</th><th>Details</th><th>Loan</th></tr></thead>
           <tbody>
             {rows.map(a => {
               const l = a.loan_id ? loanById.get(a.loan_id) : null;
@@ -151,7 +181,17 @@ export default function ActivityFeed({
                       <span className="muted">&mdash;</span>
                     )}
                   </td>
-                  <td>{KIND_LABEL[a.kind] || a.kind}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <span style={{ fontWeight: WRITE_KINDS.has(a.kind) ? 700 : 400,
+                                   color: WRITE_KINDS.has(a.kind) ? 'var(--navy)' : undefined }}>
+                      {KIND_LABEL[a.kind] || a.kind}
+                    </span>
+                  </td>
+                  <td style={{ maxWidth: 320 }}>
+                    {a.detail
+                      ? <span style={{ fontSize: 13 }}>{a.detail}</span>
+                      : <span className="muted">&mdash;</span>}
+                  </td>
                   <td>
                     {l
                       ? <Link href={`/admin/loans/${l.loan_id}`}>{l.loan_number} &middot; {l.borrower_name}</Link>

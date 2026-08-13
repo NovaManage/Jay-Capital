@@ -141,11 +141,12 @@ export async function completePortalSignup(token: string, password: string) {
     await syncBorrowerLinksForEmail(svc, email);
 
     await svc.from('portal_signup_tokens').update({ used_at: new Date().toISOString() }).eq('token', token);
-    await logActivity('account_created', null, userId);
-
     const { count } = await svc.from('loans')
       .select('id', { count: 'exact', head: true })
       .in('borrower_id', borrowers.length ? borrowers.map(b => b.id) : ['00000000-0000-0000-0000-000000000000']);
+
+    await logActivity('account_created', null, userId,
+      `${email}${(count ?? 0) > 0 ? ` · ${count} loan${count === 1 ? '' : 's'} linked` : ' · no loans matched'}`);
 
     return {
       email,

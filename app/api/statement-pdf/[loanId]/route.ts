@@ -36,7 +36,8 @@ export async function GET(req: NextRequest, { params }: { params: { loanId: stri
   const statementDate = clampMonth(requested, loan.closing_date);
 
   const extras = await fetchStatementExtras(loan.loan_id, { requireUserAccess: true });
-  await logActivity('pdf_download', loan.loan_id, user.id);
+  await logActivity('pdf_download', loan.loan_id, user.id,
+    `Statement ${statementDate} · ${loan.loan_number} · ${loan.property}`);
 
   const pdf = await statementPDF(loan, draws ?? [], statementDate, extras);
   const displayName = loan.is_entity && loan.entity_name ? loan.entity_name : loan.borrower_name;

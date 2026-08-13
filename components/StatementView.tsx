@@ -248,7 +248,7 @@ export default function StatementView({
             Questions about this statement?
           </div>
           <div>
-            {SERVICER} &middot; 33 Downtown Drive, Suite 501, Monsey, NY 10952
+            {SERVICER} &middot; 8 Murin Street, Spring Valley, NY 10977
           </div>
           <div>
             <a href="tel:+18458280731" style={{ color: 'var(--navy-med)' }}>(845) 828-0731</a>

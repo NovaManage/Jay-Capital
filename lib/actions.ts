@@ -7,6 +7,16 @@ import { syncBorrowerLinksForEmail } from '@/lib/borrower-links';
 import { randomBytes } from 'crypto';
 import { sendMail, brandShell, button, rawLink } from '@/lib/mailer';
 import { assertStrongPassword } from '@/lib/password';
+import { logActivity } from '@/lib/activity';
+import { money as fmtMoney } from '@/lib/format';
+
+/** The signed-in user's id, for attributing an admin action. */
+async function actorId(): Promise<string | null> {
+  try {
+    const { data: { user } } = await serverClient().auth.getUser();
+    return user?.id ?? null;
+  } catch { return null; }
+}
 
 async function requireAdmin() {
   const supabase = serverClient();
@@ -161,6 +171,8 @@ export async function createLoan(form: FormData) {
       closing_date: String(form.get('closing_date') || ''),
     });
     if (error) throw new Error(error.message);
+    await logActivity('loan_created', null, await actorId(),
+      `${loanNumber} · ${borrowerName} · ${String(form.get('property') || '').trim()} · ${fmtMoney(loanAmount)}`);
     revalidatePath('/admin');
   });
 }
@@ -212,6 +224,8 @@ export async function updateLoan(loanId: string, form: FormData) {
       updated_at: new Date().toISOString(),
     }).eq('id', loanId);
     if (error) throw new Error(error.message);
+    await logActivity('loan_updated', loanId, await actorId(),
+      `${String(form.get('borrower_name') || '').trim()} · ${String(form.get('property') || '').trim()}`);
     revalidatePath('/admin');
     revalidatePath(`/admin/loans/${loanId}`);
   });
@@ -220,11 +234,15 @@ export async function updateLoan(loanId: string, form: FormData) {
 export async function deleteLoan(loanId: string) {
   return run(async () => {
     const supabase = await requireAdmin();
+    const { data: gone } = await supabase.from('loan_summary')
+      .select('loan_number, borrower_name, property').eq('loan_id', loanId).maybeSingle();
     // draws cascade on delete; do it explicitly for clarity, then the loan.
     await supabase.from('draws').delete().eq('loan_id', loanId);
     await supabase.from('payments').delete().eq('loan_id', loanId);
     const { error } = await supabase.from('loans').delete().eq('id', loanId);
     if (error) throw new Error(error.message);
+    await logActivity('loan_deleted', null, await actorId(),
+      gone ? `${gone.loan_number} · ${gone.borrower_name} · ${gone.property}` : loanId);
     revalidatePath('/admin');
   });
 }
@@ -239,6 +257,8 @@ export async function addDraw(loanId: string, form: FormData) {
       amount: Number(form.get('amount') || 0),
     });
     if (error) throw new Error(error.message);
+    await logActivity('draw_added', loanId, await actorId(),
+      `${fmtMoney(Number(form.get('amount') || 0))} dated ${String(form.get('draw_date') || '')}`);
     revalidatePath(`/admin/loans/${loanId}`);
     revalidatePath('/admin');
   });
@@ -258,6 +278,8 @@ export async function updateDraw(loanId: string, drawId: string, form: FormData)
       description: String(form.get('description') || 'Construction Draw').trim() || 'Construction Draw',
     }).eq('id', drawId);
     if (error) throw new Error(error.message);
+    await logActivity('draw_updated', loanId, await actorId(),
+      `${fmtMoney(amount)} dated ${drawDate}`);
     revalidatePath(`/admin/loans/${loanId}`);
     revalidatePath('/admin');
     return { message: 'Draw updated.' };
@@ -267,8 +289,12 @@ export async function updateDraw(loanId: string, drawId: string, form: FormData)
 export async function deleteDraw(loanId: string, drawId: string) {
   return run(async () => {
     const supabase = await requireAdmin();
+    const { data: gone } = await supabase.from('draws')
+      .select('draw_date, amount').eq('id', drawId).maybeSingle();
     const { error } = await supabase.from('draws').delete().eq('id', drawId);
     if (error) throw new Error(error.message);
+    await logActivity('draw_deleted', loanId, await actorId(),
+      gone ? `${fmtMoney(Number(gone.amount))} dated ${gone.draw_date}` : drawId);
     revalidatePath(`/admin/loans/${loanId}`);
     revalidatePath('/admin');
   });
@@ -279,6 +305,7 @@ export async function setLoanStatus(loanId: string, status: string) {
     const supabase = await requireAdmin();
     const { error } = await supabase.from('loans').update({ status }).eq('id', loanId);
     if (error) throw new Error(error.message);
+    await logActivity('loan_status_changed', loanId, await actorId(), `Set to ${status.replace('_', ' ')}`);
     revalidatePath(`/admin/loans/${loanId}`);
     revalidatePath('/admin');
   });
@@ -332,6 +359,8 @@ export async function importLoansCSV(rows: Record<string, string>[]) {
         results.push({ loan: '(row)', status: `error: ${e.message}` });
       }
     }
+    await logActivity('loans_imported', null, await actorId(),
+      `${results.filter(r => r.status === 'imported').length} of ${rows.length} rows imported`);
     revalidatePath('/admin');
     return results;
   });
@@ -366,6 +395,7 @@ export async function createLender(opts: {
 
     const { data, error } = await svc.from('lenders').insert(row).select('id').single();
     if (error) throw new Error(error.message);
+    await logActivity('lender_added', null, await actorId(), name);
     revalidatePath('/admin/lenders');
     revalidatePath('/admin/loans/new');
     return { message: `${name} added.`, id: data.id };
@@ -386,6 +416,7 @@ export async function updateLender(id: string, opts: {
       payment_instructions: (opts.paymentInstructions || '').trim() || null,
     }).eq('id', id);
     if (error) throw new Error(error.message);
+    await logActivity('lender_updated', null, await actorId(), name);
     revalidatePath('/admin/lenders');
     revalidatePath('/admin');
     return { message: 'Lender updated.' };
@@ -456,6 +487,10 @@ export async function addPayment(loanId: string, opts: {
       if (aErr) throw new Error(aErr.message);
     }
 
+    await logActivity('payment_added', loanId, await actorId(),
+      `${fmtMoney(amount)} on ${opts.paymentDate}${opts.method ? ` by ${opts.method}` : ''}`
+      + (allocs.length ? ` · applied to ${allocs.map(a => a.periodMonth).join(', ')}` : ' · unapplied'));
+
     revalidatePath(`/admin/loans/${loanId}`);
     revalidatePath('/admin');
     const left = amount - allocTotal;
@@ -506,6 +541,9 @@ export async function updatePayment(loanId: string, paymentId: string, opts: {
       if (aErr) throw new Error(aErr.message);
     }
 
+    await logActivity('payment_updated', loanId, await actorId(),
+      `${fmtMoney(amount)} on ${opts.paymentDate}`);
+
     revalidatePath(`/admin/loans/${loanId}`);
     revalidatePath('/admin');
     const left = amount - allocTotal;
@@ -520,9 +558,14 @@ export async function updatePayment(loanId: string, paymentId: string, opts: {
 export async function deletePayment(loanId: string, paymentId: string) {
   return run(async () => {
     await requireAdmin();
+    const svc = serviceClient();
+    const { data: gone } = await svc.from('payments')
+      .select('payment_date, amount').eq('id', paymentId).maybeSingle();
     // allocations cascade on payment delete
-    const { error } = await serviceClient().from('payments').delete().eq('id', paymentId);
+    const { error } = await svc.from('payments').delete().eq('id', paymentId);
     if (error) throw new Error(error.message);
+    await logActivity('payment_deleted', loanId, await actorId(),
+      gone ? `${fmtMoney(Number(gone.amount))} dated ${gone.payment_date}` : paymentId);
     revalidatePath(`/admin/loans/${loanId}`);
     revalidatePath('/admin');
     return { message: 'Payment removed.' };
@@ -556,6 +599,7 @@ export async function updateUserProfile(userId: string, opts: { fullName: string
       .eq('id', userId);
     if (error) throw new Error(error.message);
 
+    await logActivity('user_updated', null, await actorId(), `${email} · role ${opts.role}`);
     revalidatePath('/admin/users');
     return { message: 'User updated.' };
   });
@@ -599,6 +643,7 @@ export async function resendInvitation(userId: string) {
     });
 
     await svc.from('profiles').update({ invited_at: new Date().toISOString() }).eq('id', userId);
+    await logActivity('user_invited', null, await actorId(), `Re-sent to ${profile.email}`);
     revalidatePath('/admin/users');
     return { message: `Invitation re-sent to ${profile.email}.` };
   });
@@ -620,6 +665,9 @@ export async function setUserActive(userId: string, active: boolean) {
     const { error } = await svc.from('profiles').update({ active }).eq('id', userId);
     if (error) throw new Error(error.message);
 
+    const { data: who } = await svc.from('profiles').select('email').eq('id', userId).maybeSingle();
+    await logActivity('user_active_changed', null, await actorId(),
+      `${who?.email ?? userId} ${active ? 'reactivated' : 'inactivated'}`);
     revalidatePath('/admin/users');
     return { message: active ? 'User reactivated. They can sign in again.' : 'User inactivated. They can no longer sign in.' };
   });
@@ -641,6 +689,7 @@ export async function sendUserPasswordReset(email: string) {
     if (!link) throw new Error('Supabase did not return a reset link.');
 
     await emailResetLink(email.trim(), link);
+    await logActivity('password_reset_sent', null, await actorId(), email.trim());
     return { message: `Password reset link emailed to ${email.trim()}.` };
   });
 }
@@ -657,6 +706,7 @@ export async function deleteUser(userId: string) {
     const { error } = await svc.auth.admin.deleteUser(userId);
     if (error) throw new Error(error.message);
 
+    await logActivity('user_deleted', null, await actorId(), userId);
     revalidatePath('/admin/users');
     return { message: 'User deleted. Their loans and borrower records were kept.' };
   });
@@ -696,6 +746,7 @@ async function createUserAndEmailInvite(
     : 'You have been given access to the Jay Capital Funding portal.';
 
   await svc.from('profiles').update({ invited_at: new Date().toISOString() }).eq('id', userId);
+  await logActivity('user_invited', null, await actorId(), `${email} (${kind})`);
 
   await sendMail({
     to: email,
@@ -815,6 +866,8 @@ export async function createBorrowerUser(opts: {
 
     await svc.from('borrowers').update({ user_id: userId, email: opts.email }).eq('id', opts.borrowerId);
     const linked = await syncBorrowerLinksForEmail(svc, opts.email);
+    await logActivity('borrower_login_created', opts.loanId, await actorId(),
+      `${opts.email}${linked > 1 ? ` · ${linked} loans linked` : ''}`);
     if (linked > 1) {
       message += ` ${linked} loans are now connected to this login.`;
     }

@@ -13,15 +13,11 @@ export default async function GoPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase.from('profiles').select('role, activated_at').eq('id', user.id).single();
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
 
-  // Every session passes through here right after sign-in.
-  await logActivity('sign_in', null, user.id);
-
-  // First arrival is what turns an invitation into a live account.
-  const now = new Date().toISOString();
-  await supabase.from('profiles')
-    .update(profile?.activated_at ? { last_seen_at: now } : { activated_at: now, last_seen_at: now })
-    .eq('id', user.id);
+  // activated_at / last_seen_at are stamped by a trigger on auth.users
+  // (migration 007). Doing it here failed silently for everyone but an admin,
+  // because profiles_admin_write blocks a user writing their own row.
+  await logActivity('sign_in', null, user.id, profile?.role ? `Role: ${profile.role}` : null);
   redirect(profile?.role === 'admin' || profile?.role === 'staff' ? '/admin' : '/portal');
 }

@@ -36,7 +36,10 @@ export default async function PortalPage() {
     </nav>
   );
 
-  if (list.length) await logActivity('portal_view', list[0].loan_id, user?.id ?? null);
+  if (list.length) {
+    await logActivity('portal_view', list[0].loan_id, user?.id ?? null,
+      list.length > 1 ? `${list.length} loans` : list[0].property);
+  }
 
   const items: PortalLoan[] = [];
   for (const loan of list) {

@@ -9,6 +9,7 @@ export interface ActivityPageRow {
   loan_id: string | null;
   user_id: string | null;
   occurred_at: string;
+  detail: string | null;
 }
 
 /**
@@ -51,7 +52,7 @@ export async function fetchActivityPage(opts: {
     const limit = Math.min(opts.limit ?? 50, 200);
 
     let q = supabase.from('portal_activity')
-      .select('id, kind, loan_id, user_id, occurred_at')
+      .select('id, kind, loan_id, user_id, occurred_at, detail')
       .order('occurred_at', { ascending: false })
       .limit(limit + 1);           // one extra tells us whether more remain
 

@@ -16,7 +16,7 @@ export const BRAND = {
   company: 'Jay Capital Funding',
   /** Registered name, for footers, statements and anywhere formal. */
   legal: 'Jay Capital Funding Inc.',
-  address: '33 Downtown Drive, Suite 501, Monsey, NY 10952',
+  address: '8 Murin Street, Spring Valley, NY 10977',
   phone: '(845) 828-0731',
   email: 'Info@JayCapitalFunding.com',
 };

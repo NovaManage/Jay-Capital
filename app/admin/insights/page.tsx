@@ -36,7 +36,7 @@ export default async function InsightsPage() {
     svc.from('payment_allocations').select('payment_id, loan_id, period_month, amount'),
     svc.from('borrowers').select('id, name, email, user_id'),
     svc.from('profiles').select('id, email, full_name, role, active'),
-    svc.from('portal_activity').select('id, kind, loan_id, user_id, occurred_at')
+    svc.from('portal_activity').select('id, kind, loan_id, user_id, occurred_at, detail')
        .order('occurred_at', { ascending: false }).limit(51),   // 50 + 1 to detect more
   ]);
 
