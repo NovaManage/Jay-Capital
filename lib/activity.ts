@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { serviceClient } from '@/lib/supabase-server';
 
 export type ActivityKind =
@@ -60,16 +61,23 @@ export async function logActivity(
       detail: detail ?? null,
     };
 
-    if (window > 0) {
-      const bucket = Math.floor(Date.now() / window);
-      row.dedupe_key = [kind, userId ?? '-', loanId ?? '-', detail ?? '-', bucket].join('|');
-    }
+    // dedupe_key is ALWAYS set. The unique index it relies on is not partial,
+    // so a null key would be inferable but ambiguous -- and more importantly a
+    // deliberate action must never collide with another, hence the random
+    // value when there is no dedupe window.
+    row.dedupe_key = window > 0
+      ? [kind, userId ?? '-', loanId ?? '-', detail ?? '-', Math.floor(Date.now() / window)].join('|')
+      : `${kind}:${randomUUID()}`;
 
-    await serviceClient()
+    const { error } = await serviceClient()
       .from('portal_activity')
       .upsert(row, { onConflict: 'dedupe_key', ignoreDuplicates: true });
-  } catch {
-    /* best effort */
+
+    // Logging must never break a page, but a silent failure once hid the fact
+    // that nothing was being recorded at all. Surfaced in the server log only.
+    if (error) console.error('[activity] not recorded:', error.message, { kind });
+  } catch (e) {
+    console.error('[activity] not recorded:', e instanceof Error ? e.message : e);
   }
 }
 
