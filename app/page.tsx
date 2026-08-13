@@ -184,7 +184,7 @@ export default function LandingPage() {
                 <a href="#contact-form">{EMAIL}</a>
               </div>
               <div className="lp-contact-item">
-                <span className="lbl">Office</span>
+                <span className="lbl">Address</span>
                 <span className="lp-contact-plain">8 Murin Street<br />Spring Valley, NY 10977</span>
               </div>
               <p className="lp-contact-hint">
